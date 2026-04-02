@@ -105,6 +105,7 @@ class ArticleSerializer(serializers.ModelSerializer):
             'category', 'category_name', 'tags', 'tags_list',
             'cover_image', 'status', 'views', 'likes', 'is_top',
             'allow_comment', 'is_ai_generated', 'ai_source',
+            'source_url', 'source_name', 'summary', 'published_time',
             'created_at', 'updated_at', 'published_at'
         ]
         read_only_fields = ['id', 'slug', 'author', 'views', 'likes', 'created_at', 'updated_at']
@@ -124,7 +125,8 @@ class ArticleCreateSerializer(serializers.ModelSerializer):
         fields = [
             'title', 'content', 'category_name', 'tag_names',
             'excerpt', 'cover_image', 'status', 'is_top',
-            'allow_comment', 'is_ai_generated', 'ai_source'
+            'allow_comment', 'is_ai_generated', 'ai_source',
+            'source_url', 'source_name', 'summary', 'published_time'
         ]
 
     def create(self, validated_data):
@@ -185,6 +187,19 @@ class ArticleAPIView(APIView):
             is_ai = request.query_params.get('is_ai')
             if is_ai:
                 articles = articles.filter(is_ai_generated=is_ai.lower() == 'true')
+
+            # 资讯筛选参数
+            source_name = request.query_params.get('source')
+            if source_name:
+                articles = articles.filter(source_name__icontains=source_name)
+
+            date_from = request.query_params.get('date_from')
+            if date_from:
+                articles = articles.filter(published_time__gte=date_from)
+
+            date_to = request.query_params.get('date_to')
+            if date_to:
+                articles = articles.filter(published_time__lte=date_to)
 
             # 分页
             page = int(request.query_params.get('page', 1))

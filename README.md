@@ -1,15 +1,25 @@
-# 咨询博客系统
+# 咨询博客系统 - AI资讯聚合
 
-一个基于 Django 的博客系统，支持用户注册登录、富文本编辑、评论功能，以及 **AI通过API自动发布文章**。
+一个基于 Django 的博客系统，支持用户注册登录、富文本编辑、评论功能，以及 **AI通过API自动发布资讯文章**。
+
+主要用途：AI自动搜索实时资讯、新闻文章，生成摘要后自动发布到博客。
 
 ## 功能特性
 
+- 🤖 **AI资讯聚合** - AI自动搜索并总结实时资讯、新闻文章
 - 📝 **文章管理** - 创建、编辑、删除文章
-- 🏷️ **分类和标签** - 文章分类和标签管理
+- 🏷️ **分类和标签** - 文章分类和标签管理（科技、财经、新闻、行业等）
 - 💬 **评论系统** - 支持登录用户和访客评论
 - 🔐 **用户认证** - 注册、登录、个人中心
 - 🎨 **富文本编辑器** - TinyMCE 编辑器
-- 🤖 **AI发布接口** - API接口支持AI自动发布文章
+- 🤖 **AI发布接口** - API接口支持AI自动发布文章（含来源链接、AI摘要）
+
+## 新增：AI资讯字段
+
+- `source_url` - 原始资讯链接
+- `source_name` - 来源网站名称（如"新浪财经"、"36氪"）
+- `summary` - AI生成的资讯摘要
+- `published_time` - 原始发布时间
 
 ## 快速开始
 
@@ -17,7 +27,7 @@
 
 ```bash
 pip install -r requirements.txt
-pip install djangorestframework django-tinymce Pillow
+pip install djangorestframework django-tinymce Pillow bleach markdown
 ```
 
 ### 2. 配置数据库
@@ -112,6 +122,9 @@ GET /api/articles/
 - `category`: 按分类slug筛选
 - `tag`: 按标签slug筛选
 - `is_ai`: 筛选AI生成的文章 (true/false)
+- `source`: 按来源名称筛选（如 `source=36氪`）
+- `date_from`: 筛选原始发布时间（格式：YYYY-MM-DD）
+- `date_to`: 筛选原始发布时间截止（格式：YYYY-MM-DD）
 - `page`: 页码
 - `page_size`: 每页数量
 
@@ -121,7 +134,7 @@ GET /api/articles/
 GET /api/articles/<slug>/
 ```
 
-#### 4. 创建文章
+#### 4. 创建文章（支持AI资讯）
 
 ```
 POST /api/articles/
@@ -130,14 +143,17 @@ POST /api/articles/
 请求体：
 ```json
 {
-    "title": "文章标题",
-    "content": "文章内容（支持HTML）",
-    "category_name": "技术",        // 可选，分类名称
-    "tag_names": ["Python", "Django"],  // 可选，标签名称数组
-    "excerpt": "文章摘要",          // 可选
-    "status": "published",          // published 或 draft
-    "is_ai_generated": true,        // 默认true
-    "ai_source": "Claude"           // AI来源标识
+    "title": "AI重塑新闻行业：传统媒体加速转型",
+    "content": "<p>文章正文内容...</p>",
+    "source_url": "https://www.36kr.com/p/123456789",
+    "source_name": "36氪",
+    "summary": "AI正在深刻改变新闻行业格局，传统媒体加速数字化转型，AI写稿、智能编辑成为新趋势。",
+    "published_time": "2026-04-02T10:30:00",
+    "category_name": "科技动态",
+    "tag_names": ["AI", "新闻", "数字化转型"],
+    "excerpt": "文章摘要",
+    "status": "published",
+    "ai_source": "Claude"
 }
 ```
 
@@ -169,20 +185,25 @@ GET /api/tags/
 
 ## 使用示例
 
-### Python示例（AI发布文章）
+### Python示例（AI发布资讯）
 
 ```python
 import requests
+from datetime import datetime
 
 API_URL = "http://localhost:8000/api/articles/"
 API_KEY = "your-api-key-here"
 
-# 创建文章
+# 创建AI资讯文章
 article_data = {
-    "title": "AI生成的文章示例",
-    "content": "<h1>这是一篇由AI生成的文章</h1><p>内容可以包含HTML标签...</p>",
-    "category_name": "AI技术",
-    "tag_names": ["AI", "Python"],
+    "title": "AI重塑新闻行业：传统媒体加速转型",
+    "content": "<h2>行业现状</h2><p>随着AI技术的快速发展...</p>",
+    "source_url": "https://www.36kr.com/p/123456789",
+    "source_name": "36氪",
+    "summary": "AI正在深刻改变新闻行业格局，传统媒体加速数字化转型，AI写稿、智能编辑成为新趋势。",
+    "published_time": "2026-04-02T10:30:00",
+    "category_name": "科技动态",
+    "tag_names": ["AI", "新闻", "数字化转型"],
     "status": "published",
     "ai_source": "Claude"
 }
@@ -199,18 +220,26 @@ print(response.json())
 ### cURL示例
 
 ```bash
-# 创建文章
+# 创建AI资讯文章
 curl -X POST http://localhost:8000/api/articles/ \
   -H "Authorization: Bearer your-api-key" \
   -H "Content-Type: application/json" \
   -d '{
-    "title": "测试文章",
-    "content": "这是文章内容",
-    "status": "published"
+    "title": "AI重塑新闻行业",
+    "content": "<p>文章内容...</p>",
+    "source_url": "https://www.36kr.com/p/123456789",
+    "source_name": "36氪",
+    "summary": "AI正在改变新闻行业...",
+    "status": "published",
+    "ai_source": "Claude"
   }'
 
-# 获取文章列表
-curl -X GET "http://localhost:8000/api/articles/" \
+# 筛选AI生成的资讯
+curl -X GET "http://localhost:8000/api/articles/?is_ai=true" \
+  -H "Authorization: Bearer your-api-key"
+
+# 筛选特定来源的资讯
+curl -X GET "http://localhost:8000/api/articles/?source=36氪" \
   -H "Authorization: Bearer your-api-key"
 ```
 
