@@ -7,6 +7,19 @@
     <div class="col-lg-8">
         <!-- 文章详情 -->
         <article class="article-detail">
+            <!-- 来源信息 -->
+            {% if article.source_name %}
+            <div class="source-info mb-3">
+                <a href="{{ article.source_url }}" target="_blank" class="source-link">
+                    <i class="fas fa-external-link-alt"></i>
+                    来源：{{ article.source_name }}
+                    {% if article.published_time %}
+                    <span class="source-date">({{ article.published_time|date:"Y年m月d日 H:i" }})</span>
+                    {% endif %}
+                </a>
+            </div>
+            {% endif %}
+
             <!-- 标签 -->
             <div class="mb-3">
                 {% if article.is_top %}
@@ -37,6 +50,19 @@
                 {% endif %}
             </div>
 
+            <!-- AI摘要 -->
+            {% if article.summary %}
+            <div class="ai-summary-box mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h5 class="mb-0"><i class="fas fa-robot text-primary"></i> AI摘要</h5>
+                    <button class="btn btn-sm btn-outline-primary" onclick="copySummary()">
+                        <i class="fas fa-copy"></i> 复制摘要
+                    </button>
+                </div>
+                <p class="summary-content mb-0" id="summary-content">{{ article.summary }}</p>
+            </div>
+            {% endif %}
+
             <!-- 封面图 -->
             {% if article.cover_image %}
             <div class="mb-4">
@@ -48,6 +74,15 @@
             <div class="article-content">
                 {{ article.content|safe }}
             </div>
+
+            <!-- 原始链接 -->
+            {% if article.source_url %}
+            <div class="original-link-box mt-4 pt-4 border-top">
+                <a href="{{ article.source_url }}" target="_blank" class="btn btn-outline-secondary">
+                    <i class="fas fa-external-link-alt"></i> 阅读原文
+                </a>
+            </div>
+            {% endif %}
 
             <!-- 标签 -->
             <div class="mt-4 pt-4 border-top">
@@ -149,6 +184,34 @@
 
     <!-- 侧边栏 -->
     <aside class="col-lg-4">
+        <!-- 来源信息卡 -->
+        {% if article.source_name %}
+        <div class="sidebar-card">
+            <h5><i class="fas fa-globe"></i> 资讯来源</h5>
+            <ul class="list-unstyled mb-3">
+                <li class="mb-2">
+                    <i class="fas fa-building text-primary"></i>
+                    <strong>{{ article.source_name }}</strong>
+                </li>
+                {% if article.published_time %}
+                <li class="mb-2">
+                    <i class="fas fa-clock text-primary"></i>
+                    {{ article.published_time|date:"Y年m月d日 H:i" }}
+                </li>
+                {% endif %}
+                {% if article.source_url %}
+                <li>
+                    <a href="{{ article.source_url }}" target="_blank" class="text-decoration-none">
+                        <i class="fas fa-external-link-alt text-primary"></i>
+                        查看原文
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </div>
+        {% endif %}
+
+        <!-- 文章信息 -->
         <div class="sidebar-card">
             <h5><i class="fas fa-info-circle"></i> 文章信息</h5>
             <ul class="list-unstyled">
@@ -156,14 +219,79 @@
                 <li class="mb-2"><i class="fas fa-calendar"></i> 发布：{{ article.created_at|date:"Y-m-d H:i" }}</li>
                 <li class="mb-2"><i class="fas fa-eye"></i> 阅读：{{ article.views }}</li>
                 <li class="mb-2"><i class="fas fa-comments"></i> 评论：{{ article.comments.count }}</li>
+                {% if article.ai_source %}
+                <li class="mb-2"><i class="fas fa-robot"></i> AI来源：{{ article.ai_source }}</li>
+                {% endif %}
             </ul>
         </div>
     </aside>
 </div>
 {% endblock %}
 
+{% block extra_css %}
+<style>
+    .source-info {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        padding: 0.75rem 1rem;
+        border-radius: 10px;
+        border-left: 4px solid #11998e;
+    }
+
+    .source-link {
+        color: #11998e;
+        text-decoration: none;
+        font-weight: 500;
+    }
+
+    .source-link:hover {
+        color: #0d7a6e;
+        text-decoration: underline;
+    }
+
+    .source-date {
+        color: #6c757d;
+        font-weight: normal;
+    }
+
+    .ai-summary-box {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 1.5rem;
+        border-radius: 15px;
+    }
+
+    .ai-summary-box h5 {
+        color: white;
+    }
+
+    .summary-content {
+        font-size: 1.05rem;
+        line-height: 1.8;
+        color: white;
+    }
+
+    .original-link-box {
+        border-top: 1px dashed #dee2e6;
+    }
+
+    .article-title {
+        font-size: 1.8rem;
+    }
+</style>
+{% endblock %}
+
 {% block extra_js %}
 <script>
+// 复制摘要
+function copySummary() {
+    const summary = document.getElementById('summary-content').innerText;
+    navigator.clipboard.writeText(summary).then(() => {
+        alert('摘要已复制到剪贴板');
+    }).catch(err => {
+        console.error('复制失败:', err);
+    });
+}
+
 // 评论提交
 document.getElementById('comment-form').addEventListener('submit', function(e) {
     e.preventDefault();

@@ -85,6 +85,12 @@ class Article(models.Model):
     is_ai_generated = models.BooleanField('AI生成', default=False)
     ai_source = models.CharField('AI来源', max_length=100, blank=True)
 
+    # 资讯相关字段
+    source_url = models.URLField('原始链接', max_length=500, blank=True, null=True, help_text='原始资讯URL')
+    source_name = models.CharField('来源名称', max_length=100, blank=True, help_text='如：新浪财经、36氪')
+    summary = models.TextField('AI摘要', blank=True, help_text='AI生成的资讯摘要')
+    published_time = models.DateTimeField('原始发布时间', null=True, blank=True, help_text='原文发布时间')
+
     class Meta:
         verbose_name = '文章'
         verbose_name_plural = '文章'
