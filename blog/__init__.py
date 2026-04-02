@@ -1,0 +1,4 @@
+"""
+Django blog project initialization
+"""
+

@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }} - 咨询博客{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="article-detail">
+            <h2 class="mb-4"><i class="fas fa-pen"></i> {{ title }}</h2>
+
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+
+                <div class="mb-3">
+                    <label for="id_title" class="form-label">文章标题 *</label>
+                    <input type="text" class="form-control" id="id_title" name="title"
+                           value="{{ form.title.value|default:'' }}" required>
+                </div>
+
+                <div class="mb-3">
+                    <label for="id_content" class="form-label">文章内容 *</label>
+                    <textarea class="form-control" id="id_content" name="content" rows="10" required>{{ form.content.value|default:'' }}</textarea>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="id_category" class="form-label">分类</label>
+                        <select class="form-control" id="id_category" name="category">
+                            <option value="">-- 选择分类 --</option>
+                            {% for cat in form.category.field.queryset %}
+                            <option value="{{ cat.id }}" {% if form.category.value|stringformat:"s" == cat.id|stringformat:"s" %}selected{% endif %}>
+                                {{ cat.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="id_status" class="form-label">状态</label>
+                        <select class="form-control" id="id_status" name="status">
+                            <option value="draft" {% if form.status.value == 'draft' %}selected{% endif %}>草稿</option>
+                            <option value="published" {% if form.status.value == 'published' %}selected{% endif %}>发布</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">标签</label>
+                    <div class="d-flex flex-wrap gap-2">
+                        {% for tag in form.tags.field.queryset %}
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="tags" value="{{ tag.id }}"
+                                   id="tag-{{ tag.id }}"
+                                   {% if tag.id in form.tags.value %}checked{% endif %}>
+                            <label class="form-check-label" for="tag-{{ tag.id }}">{{ tag.name }}</label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="id_cover_image" class="form-label">封面图片</label>
+                    <input type="file" class="form-control" id="id_cover_image" name="cover_image" accept="image/*">
+                    {% if article.cover_image %}
+                    <div class="mt-2">
+                        <img src="{{ article.cover_image.url }}" alt="当前封面" style="max-height: 150px;">
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="mb-3">
+                    <label for="id_excerpt" class="form-label">摘要（可选，留空自动生成）</label>
+                    <textarea class="form-control" id="id_excerpt" name="excerpt" rows="3">{{ form.excerpt.value|default:'' }}</textarea>
+                </div>
+
+                <div class="mb-3 form-check">
+                    <input type="checkbox" class="form-check-input" id="id_allow_comment" name="allow_comment"
+                           {% if form.allow_comment.value or form.allow_comment.value == None %}checked{% endif %}>
+                    <label class="form-check-label" for="id_allow_comment">允许评论</label>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> 保存
+                    </button>
+                    <a href="{% url 'blog:index' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-times"></i> 取消
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

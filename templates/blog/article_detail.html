@@ -1,0 +1,202 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ article.title }} - 咨询博客{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <!-- 文章详情 -->
+        <article class="article-detail">
+            <!-- 标签 -->
+            <div class="mb-3">
+                {% if article.is_top %}
+                <span class="top-badge"><i class="fas fa-thumbtack"></i> 置顶</span>
+                {% endif %}
+                {% if article.category %}
+                <a href="{% url 'blog:category' article.category.slug %}" class="category-badge">
+                    {{ article.category.name }}
+                </a>
+                {% endif %}
+                {% if article.is_ai_generated %}
+                <span class="ai-badge" title="由{{ article.ai_source|default:'AI' }}生成">
+                    <i class="fas fa-robot"></i> AI生成
+                </span>
+                {% endif %}
+            </div>
+
+            <!-- 标题 -->
+            <h1 class="article-title">{{ article.title }}</h1>
+
+            <!-- 元信息 -->
+            <div class="article-meta mb-4">
+                <span><i class="fas fa-user"></i> {{ article.author.username }}</span>
+                <span class="ms-3"><i class="fas fa-calendar"></i> {{ article.created_at|date:"Y年m月d日 H:i" }}</span>
+                <span class="ms-3"><i class="fas fa-eye"></i> {{ article.views }} 阅读</span>
+                {% if article.updated_at != article.created_at %}
+                <span class="ms-3"><i class="fas fa-edit"></i> 更新于 {{ article.updated_at|date:"Y年m月d日" }}</span>
+                {% endif %}
+            </div>
+
+            <!-- 封面图 -->
+            {% if article.cover_image %}
+            <div class="mb-4">
+                <img src="{{ article.cover_image.url }}" alt="{{ article.title }}" class="img-fluid rounded">
+            </div>
+            {% endif %}
+
+            <!-- 文章内容 -->
+            <div class="article-content">
+                {{ article.content|safe }}
+            </div>
+
+            <!-- 标签 -->
+            <div class="mt-4 pt-4 border-top">
+                <strong><i class="fas fa-tags"></i> 标签：</strong>
+                {% for tag in article.tags.all %}
+                <a href="{% url 'blog:tag' tag.slug %}" class="tag-badge me-1">{{ tag.name }}</a>
+                {% endfor %}
+            </div>
+
+            <!-- 作者操作 -->
+            {% if user == article.author %}
+            <div class="mt-4 pt-4 border-top">
+                <a href="{% url 'blog:update_article' article.slug %}" class="btn btn-primary btn-sm">
+                    <i class="fas fa-edit"></i> 编辑
+                </a>
+                <a href="{% url 'blog:delete_article' article.slug %}" class="btn btn-danger btn-sm">
+                    <i class="fas fa-trash"></i> 删除
+                </a>
+            </div>
+            {% endif %}
+        </article>
+
+        <!-- 评论区 -->
+        {% if article.allow_comment %}
+        <section class="comment-section">
+            <h4 class="mb-4"><i class="fas fa-comments"></i> 评论 ({{ article.comments.count }})</h4>
+
+            <!-- 评论表单 -->
+            <div class="mb-4">
+                <form id="comment-form" data-article-id="{{ article.id }}">
+                    {% csrf_token %}
+                    {% if not user.is_authenticated %}
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <input type="text" class="form-control" name="nickname" placeholder="昵称 *" required>
+                        </div>
+                        <div class="col-md-6">
+                            <input type="email" class="form-control" name="email" placeholder="邮箱（选填）">
+                        </div>
+                    </div>
+                    {% endif %}
+                    <div class="mb-3">
+                        <textarea class="form-control" name="content" rows="3" placeholder="写下你的评论..." required></textarea>
+                    </div>
+                    <input type="hidden" name="parent_id" id="parent_id" value="">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-paper-plane"></i> 发表评论
+                    </button>
+                </form>
+            </div>
+
+            <!-- 评论列表 -->
+            <div id="comment-list">
+                {% for comment in comments %}
+                <div class="comment-item" id="comment-{{ comment.id }}">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <span class="comment-author">
+                                {% if comment.author %}
+                                    {{ comment.author.username }}
+                                {% else %}
+                                    {{ comment.nickname }}
+                                {% endif %}
+                            </span>
+                            <span class="comment-date ms-2">{{ comment.created_at|date:"Y-m-d H:i" }}</span>
+                        </div>
+                        <button class="btn btn-sm btn-outline-secondary reply-btn" data-comment-id="{{ comment.id }}">
+                            <i class="fas fa-reply"></i> 回复
+                        </button>
+                    </div>
+                    <div class="comment-content mt-2">{{ comment.content }}</div>
+
+                    <!-- 子评论 -->
+                    {% for reply in comment.replies.all %}
+                    <div class="comment-item ms-4 mt-2" style="border-left-color: #3498db;">
+                        <span class="comment-author">
+                            {% if reply.author %}
+                                {{ reply.author.username }}
+                            {% else %}
+                                {{ reply.nickname }}
+                            {% endif %}
+                        </span>
+                        <span class="comment-date ms-2">{{ reply.created_at|date:"Y-m-d H:i" }}</span>
+                        <div class="comment-content mt-1">{{ reply.content }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% empty %}
+                <p class="text-muted text-center">暂无评论，快来发表第一条评论吧！</p>
+                {% endfor %}
+            </div>
+        </section>
+        {% else %}
+        <div class="alert alert-warning mt-4">
+            <i class="fas fa-lock"></i> 该文章已关闭评论
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- 侧边栏 -->
+    <aside class="col-lg-4">
+        <div class="sidebar-card">
+            <h5><i class="fas fa-info-circle"></i> 文章信息</h5>
+            <ul class="list-unstyled">
+                <li class="mb-2"><i class="fas fa-user"></i> 作者：{{ article.author.username }}</li>
+                <li class="mb-2"><i class="fas fa-calendar"></i> 发布：{{ article.created_at|date:"Y-m-d H:i" }}</li>
+                <li class="mb-2"><i class="fas fa-eye"></i> 阅读：{{ article.views }}</li>
+                <li class="mb-2"><i class="fas fa-comments"></i> 评论：{{ article.comments.count }}</li>
+            </ul>
+        </div>
+    </aside>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 评论提交
+document.getElementById('comment-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const form = this;
+    const formData = new FormData(form);
+
+    fetch(`/article/${form.dataset.articleId}/comment/`, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('评论失败：' + JSON.stringify(data.error));
+        }
+    })
+    .catch(error => {
+        alert('评论失败，请稍后重试');
+    });
+});
+
+// 回复按钮
+document.querySelectorAll('.reply-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const commentId = this.dataset.commentId;
+        document.getElementById('parent_id').value = commentId;
+        document.querySelector('textarea[name="content"]').focus();
+    });
+});
+</script>
+{% endblock %}

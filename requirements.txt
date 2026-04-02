@@ -1,0 +1,8 @@
+# Django 博客系统依赖
+Django>=4.2
+markdown
+bleach
+PyMySQL
+django-tinymce  # 富文本编辑器
+django-rest-framework  # API接口
+Pillow  # 图片处理
