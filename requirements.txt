@@ -4,5 +4,5 @@ markdown
 bleach
 PyMySQL
 django-tinymce  # 富文本编辑器
-django-rest-framework  # API接口
+djangorestframework  # API接口
 Pillow  # 图片处理
