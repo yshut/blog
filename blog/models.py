@@ -127,7 +127,7 @@ class Article(models.Model):
         """增加阅读量，使用 F 表达式避免竞态条件"""
         from django.db.models import F
         Article.objects.filter(pk=self.pk).update(views=F('views') + 1)
-        self.views = F('views') + 1
+        self.refresh_from_db(fields=['views'])
 
 
 class Comment(models.Model):

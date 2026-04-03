@@ -1,90 +1,477 @@
 {% extends 'base.html' %}
 
-{% block title %}个人中心 - 咨询博客{% endblock %}
+{% block title %}个人中心 - NewsFlow{% endblock %}
 
 {% block content %}
 <div class="row">
     <div class="col-lg-8">
-        <div class="article-detail">
-            <h2 class="mb-4"><i class="fas fa-user-circle"></i> 个人中心</h2>
-
-            <div class="row mb-4">
-                <div class="col-md-4 text-center">
-                    <div class="mb-3">
-                        <i class="fas fa-user-circle fa-5x text-primary"></i>
-                    </div>
-                    <h4>{{ user.username }}</h4>
-                    <p class="text-muted">{{ user.email }}</p>
+        <!-- Profile Header -->
+        <div class="profile-header slide-up">
+            <div class="profile-cover"></div>
+            <div class="profile-info">
+                <div class="profile-avatar">
+                    {{ user.username|first|upper }}
                 </div>
-                <div class="col-md-8">
-                    <div class="row text-center">
-                        <div class="col-4">
-                            <h3>{{ user.articles.count }}</h3>
-                            <p class="text-muted">文章</p>
-                        </div>
-                        <div class="col-4">
-                            <h3>{{ user.comments.count }}</h3>
-                            <p class="text-muted">评论</p>
-                        </div>
-                        <div class="col-4">
-                            <h3>{{ user.articles.aggregate(views=models.Sum('views')) }}</h3>
-                            <p class="text-muted">总阅读</p>
-                        </div>
+                <div class="profile-details">
+                    <h2 class="profile-name">{{ user.username }}</h2>
+                    <p class="profile-email">{{ user.email }}</p>
+                </div>
+                <div class="profile-stats-row">
+                    <div class="profile-stat">
+                        <span class="profile-stat-number">{{ user.articles.count }}</span>
+                        <span class="profile-stat-label">文章</span>
+                    </div>
+                    <div class="profile-stat">
+                        <span class="profile-stat-number">{{ user.comments.count }}</span>
+                        <span class="profile-stat-label">评论</span>
+                    </div>
+                    <div class="profile-stat">
+                        <span class="profile-stat-number">{{ total_views|default:0 }}</span>
+                        <span class="profile-stat-label">总阅读</span>
                     </div>
                 </div>
-            </div>
-
-            <div class="d-flex gap-2 mb-4">
-                <a href="{% url 'blog:create_article' %}" class="btn btn-primary">
-                    <i class="fas fa-pen"></i> 发布新文章
-                </a>
             </div>
         </div>
 
-        <!-- 我的文章 -->
-        <div class="article-detail mt-4">
-            <h4 class="mb-4"><i class="fas fa-file-alt"></i> 我的文章</h4>
+        <!-- Quick Actions -->
+        <div class="quick-actions mb-4 fade-in">
+            <a href="{% url 'blog:create_article' %}" class="quick-action-btn">
+                <div class="quick-action-icon" style="background: rgba(99, 102, 241, 0.1); color: var(--primary);">
+                    <i class="fas fa-pen"></i>
+                </div>
+                <span>发布文章</span>
+            </a>
+            {% if user.is_staff %}
+            <a href="/dashboard/" class="quick-action-btn">
+                <div class="quick-action-icon" style="background: rgba(244, 63, 94, 0.1); color: var(--accent);">
+                    <i class="fas fa-cog"></i>
+                </div>
+                <span>后台管理</span>
+            </a>
+            {% endif %}
+            <a href="/dashboard/apikeys/" class="quick-action-btn">
+                <div class="quick-action-icon" style="background: rgba(16, 185, 129, 0.1); color: var(--success);">
+                    <i class="fas fa-key"></i>
+                </div>
+                <span>API密钥</span>
+            </a>
+        </div>
+
+        <!-- My Articles -->
+        <div class="article-detail fade-in">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h4 style="font-weight: 700; font-size: 1.1rem; margin: 0;">
+                    <i class="fas fa-file-alt" style="color: var(--primary);"></i> 我的文章
+                </h4>
+                <span class="badge" style="background: rgba(99, 102, 241, 0.1); color: var(--primary); font-weight: 500; padding: 0.4rem 0.8rem; border-radius: 50px;">
+                    {{ user_articles.count }} 篇
+                </span>
+            </div>
 
             {% for article in user_articles %}
-            <div class="d-flex justify-content-between align-items-center p-3 mb-2 bg-light rounded">
-                <div>
-                    <h5 class="mb-1">
+            <div class="my-article-item">
+                <div class="my-article-info">
+                    <h5 class="my-article-title">
                         <a href="{% url 'blog:article_detail' article.slug %}">{{ article.title }}</a>
-                        {% if article.status == 'draft' %}
-                        <span class="badge bg-secondary">草稿</span>
-                        {% else %}
-                        <span class="badge bg-success">已发布</span>
-                        {% endif %}
                     </h5>
-                    <small class="text-muted">
-                        <i class="fas fa-calendar"></i> {{ article.created_at|date:"Y-m-d" }}
-                        <i class="fas fa-eye ms-2"></i> {{ article.views }}
-                    </small>
+                    <div class="my-article-meta">
+                        {% if article.status == 'draft' %}
+                        <span class="status-badge draft"><i class="fas fa-circle"></i> 草稿</span>
+                        {% else %}
+                        <span class="status-badge published"><i class="fas fa-circle"></i> 已发布</span>
+                        {% endif %}
+                        {% if article.is_ai_generated %}
+                        <span class="ai-badge" style="font-size: 0.65rem;"><i class="fas fa-robot"></i></span>
+                        {% endif %}
+                        <span><i class="fas fa-calendar"></i> {{ article.created_at|date:"Y-m-d" }}</span>
+                        <span><i class="fas fa-eye"></i> {{ article.views }}</span>
+                        {% if article.category %}
+                        <span><i class="fas fa-folder"></i> {{ article.category.name }}</span>
+                        {% endif %}
+                    </div>
                 </div>
-                <div>
-                    <a href="{% url 'blog:update_article' article.slug %}" class="btn btn-sm btn-outline-primary">
+                <div class="my-article-actions">
+                    <a href="{% url 'blog:update_article' article.slug %}" class="action-btn edit" title="编辑">
                         <i class="fas fa-edit"></i>
                     </a>
-                    <a href="{% url 'blog:delete_article' article.slug %}" class="btn btn-sm btn-outline-danger">
+                    <a href="{% url 'blog:delete_article' article.slug %}" class="action-btn delete" title="删除">
                         <i class="fas fa-trash"></i>
                     </a>
                 </div>
             </div>
             {% empty %}
-            <p class="text-muted text-center">暂无文章，快来发布第一篇吧！</p>
+            <div class="text-center py-4" style="color: var(--text-muted);">
+                <i class="fas fa-pen-fancy fa-2x mb-2" style="opacity: 0.3;"></i>
+                <p class="mb-2">暂无文章</p>
+                <a href="{% url 'blog:create_article' %}" class="btn btn-primary btn-sm">
+                    <i class="fas fa-plus"></i> 发布第一篇
+                </a>
+            </div>
             {% endfor %}
         </div>
     </div>
 
-    <!-- 侧边栏 -->
+    <!-- Sidebar -->
     <div class="col-lg-4">
-        <div class="sidebar-card">
+        <!-- API Keys -->
+        <div class="sidebar-card fade-in">
             <h5><i class="fas fa-key"></i> API密钥</h5>
-            <p class="text-muted small">使用API密钥可以让AI自动发布文章到您的博客。</p>
-            <a href="/admin/blog/apikey/" class="btn btn-outline-primary btn-sm">
-                管理API密钥
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1rem;">
+                使用API密钥让AI自动发布文章到您的博客
+            </p>
+            <a href="/dashboard/apikeys/" class="btn btn-outline-primary btn-sm w-100">
+                <i class="fas fa-cog"></i> 管理API密钥
             </a>
+        </div>
+
+        <!-- Activity -->
+        <div class="sidebar-card fade-in">
+            <h5><i class="fas fa-chart-bar"></i> 数据概览</h5>
+            <div class="data-overview">
+                <div class="data-item">
+                    <div class="data-bar" style="width: 100%; background: var(--gradient-primary);"></div>
+                    <div class="data-info">
+                        <span>总文章</span>
+                        <strong>{{ user.articles.count }}</strong>
+                    </div>
+                </div>
+                <div class="data-item">
+                    <div class="data-bar" style="width: 70%; background: var(--gradient-secondary);"></div>
+                    <div class="data-info">
+                        <span>总评论</span>
+                        <strong>{{ user.comments.count }}</strong>
+                    </div>
+                </div>
+                <div class="data-item">
+                    <div class="data-bar" style="width: 85%; background: var(--gradient-accent);"></div>
+                    <div class="data-info">
+                        <span>总阅读</span>
+                        <strong>{{ total_views|default:0 }}</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Links -->
+        <div class="sidebar-card fade-in">
+            <h5><i class="fas fa-link"></i> 快捷链接</h5>
+            <div class="d-grid gap-2">
+                <a href="{% url 'blog:index' %}" class="sidebar-filter-btn">
+                    <i class="fas fa-home"></i>
+                    <span>返回首页</span>
+                    <i class="fas fa-chevron-right ms-auto"></i>
+                </a>
+                <a href="/api/status/" class="sidebar-filter-btn">
+                    <i class="fas fa-plug"></i>
+                    <span>API状态</span>
+                    <i class="fas fa-chevron-right ms-auto"></i>
+                </a>
+            </div>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Profile Header */
+    .profile-header {
+        background: var(--bg-card);
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--border-color);
+        overflow: hidden;
+        margin-bottom: 1.5rem;
+    }
+
+    .profile-cover {
+        height: 120px;
+        background: var(--gradient-primary);
+        position: relative;
+    }
+
+    .profile-cover::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 40px;
+        background: linear-gradient(transparent, rgba(0,0,0,0.1));
+    }
+
+    .profile-info {
+        padding: 0 2rem 2rem;
+        margin-top: -40px;
+        position: relative;
+    }
+
+    .profile-avatar {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: var(--gradient-primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 2rem;
+        font-weight: 800;
+        border: 4px solid var(--bg-card);
+        margin-bottom: 1rem;
+    }
+
+    .profile-name {
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: var(--text-primary);
+        margin-bottom: 0.25rem;
+    }
+
+    .profile-email {
+        color: var(--text-muted);
+        font-size: 0.9rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .profile-stats-row {
+        display: flex;
+        gap: 2rem;
+    }
+
+    .profile-stat {
+        text-align: center;
+    }
+
+    .profile-stat-number {
+        display: block;
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+
+    .profile-stat-label {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+    }
+
+    /* Quick Actions */
+    .quick-actions {
+        display: flex;
+        gap: 1rem;
+    }
+
+    .quick-action-btn {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 1.25rem;
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-lg);
+        text-decoration: none;
+        color: var(--text-secondary);
+        font-size: 0.85rem;
+        font-weight: 500;
+        transition: var(--transition);
+    }
+
+    .quick-action-btn:hover {
+        transform: translateY(-3px);
+        box-shadow: var(--shadow-md);
+        border-color: var(--primary-light);
+        color: var(--primary);
+    }
+
+    .quick-action-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: var(--radius-md);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+    }
+
+    /* My Article Items */
+    .my-article-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem;
+        border-radius: var(--radius-md);
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        margin-bottom: 0.75rem;
+        transition: var(--transition);
+    }
+
+    .my-article-item:hover {
+        border-color: var(--primary-light);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .my-article-title {
+        font-size: 0.95rem;
+        font-weight: 600;
+        margin-bottom: 0.4rem;
+    }
+
+    .my-article-title a {
+        color: var(--text-primary);
+        text-decoration: none;
+        transition: var(--transition);
+    }
+
+    .my-article-title a:hover {
+        color: var(--primary);
+    }
+
+    .my-article-meta {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        flex-wrap: wrap;
+    }
+
+    .my-article-meta span {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .status-badge {
+        font-size: 0.7rem;
+        font-weight: 600;
+        padding: 0.15rem 0.5rem;
+        border-radius: 50px;
+    }
+
+    .status-badge.draft {
+        background: rgba(245, 158, 11, 0.1);
+        color: var(--warning);
+    }
+
+    .status-badge.published {
+        background: rgba(16, 185, 129, 0.1);
+        color: var(--success);
+    }
+
+    .status-badge i {
+        font-size: 0.4rem;
+    }
+
+    .my-article-actions {
+        display: flex;
+        gap: 0.5rem;
+        flex-shrink: 0;
+    }
+
+    .action-btn {
+        width: 34px;
+        height: 34px;
+        border-radius: var(--radius-sm);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-decoration: none;
+        transition: var(--transition);
+        font-size: 0.85rem;
+    }
+
+    .action-btn.edit {
+        background: rgba(99, 102, 241, 0.1);
+        color: var(--primary);
+    }
+
+    .action-btn.edit:hover {
+        background: var(--primary);
+        color: white;
+    }
+
+    .action-btn.delete {
+        background: rgba(244, 63, 94, 0.1);
+        color: var(--accent);
+    }
+
+    .action-btn.delete:hover {
+        background: var(--accent);
+        color: white;
+    }
+
+    /* Data Overview */
+    .data-overview {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .data-item {
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+    }
+
+    .data-bar {
+        height: 6px;
+        border-radius: 3px;
+        transition: var(--transition);
+    }
+
+    .data-info {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.8rem;
+    }
+
+    .data-info span {
+        color: var(--text-muted);
+    }
+
+    .data-info strong {
+        color: var(--text-primary);
+    }
+
+    /* Sidebar Filter Btn (reused from index) */
+    .sidebar-filter-btn {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem 1rem;
+        border-radius: var(--radius-sm);
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        color: var(--text-secondary);
+        text-decoration: none;
+        font-size: 0.85rem;
+        font-weight: 500;
+        transition: var(--transition);
+    }
+
+    .sidebar-filter-btn:hover {
+        border-color: var(--primary);
+        color: var(--primary);
+    }
+
+    .sidebar-filter-btn i:first-child {
+        width: 20px;
+        text-align: center;
+        color: var(--primary);
+    }
+
+    @media (max-width: 768px) {
+        .profile-info {
+            padding: 0 1.25rem 1.5rem;
+        }
+        .profile-stats-row {
+            gap: 1.5rem;
+        }
+        .quick-actions {
+            flex-direction: column;
+        }
+    }
+</style>
 {% endblock %}

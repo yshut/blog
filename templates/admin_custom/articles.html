@@ -1,0 +1,761 @@
+{% extends 'admin_custom/base.html' %}
+
+{% block page_title %}文章管理{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ===== Filter Bar Enhanced ===== */
+    .articles-filter-bar {
+        display: flex; align-items: center; gap: .75rem; flex-wrap: wrap;
+        padding: 1rem 1.25rem; border-bottom: 1px solid var(--border);
+    }
+    .articles-filter-bar .filter-tabs { flex-shrink: 0; }
+    .filter-tab .tab-badge {
+        display: inline-flex; align-items: center; justify-content: center;
+        min-width: 18px; height: 18px; padding: 0 5px;
+        border-radius: 9px; font-size: .6rem; font-weight: 700;
+        background: var(--border); color: var(--text-3);
+        margin-left: 4px; line-height: 1; transition: var(--transition);
+    }
+    .filter-tab.active .tab-badge {
+        background: var(--primary); color: #fff;
+    }
+    .filter-reset {
+        display: inline-flex; align-items: center; gap: 4px;
+        padding: .3rem .7rem; border-radius: 6px; font-size: .72rem; font-weight: 500;
+        color: var(--accent); background: rgba(244,63,94,.06); border: 1px solid rgba(244,63,94,.15);
+        cursor: pointer; transition: var(--transition); text-decoration: none;
+    }
+    .filter-reset:hover { background: rgba(244,63,94,.12); border-color: rgba(244,63,94,.3); color: var(--accent); }
+    .export-btn {
+        display: inline-flex; align-items: center; gap: 5px;
+        padding: .38rem .85rem; border-radius: 8px; font-size: .78rem; font-weight: 500;
+        color: var(--text-2); background: var(--bg); border: 1px solid var(--border);
+        cursor: pointer; transition: var(--transition); text-decoration: none;
+    }
+    .export-btn:hover { border-color: var(--primary); color: var(--primary); background: rgba(99,102,241,.04); }
+
+    /* ===== Author Avatar ===== */
+    .author-cell { display: flex; align-items: center; gap: .45rem; }
+    .author-avatar {
+        width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
+        display: flex; align-items: center; justify-content: center;
+        font-size: .6rem; font-weight: 700; color: #fff;
+        background: linear-gradient(135deg, var(--primary-light), var(--primary-dark));
+    }
+    .author-name { font-size: .8rem; color: var(--text-2); white-space: nowrap; }
+
+    /* ===== Tags Pills ===== */
+    .tag-pills { display: flex; gap: 3px; flex-wrap: wrap; margin-top: 3px; }
+    .tag-pill {
+        display: inline-block; padding: 1px 7px; border-radius: 10px;
+        font-size: .58rem; font-weight: 600; line-height: 1.6;
+        white-space: nowrap;
+    }
+
+    /* ===== Title Cell Enhanced ===== */
+    .title-cell { display: flex; align-items: flex-start; gap: .5rem; min-width: 0; }
+    .title-main {
+        font-weight: 600; color: var(--text); text-decoration: none; font-size: .85rem;
+        display: block; max-width: 320px; overflow: hidden; text-overflow: ellipsis;
+        white-space: nowrap; cursor: pointer; transition: var(--transition);
+    }
+    .title-main:hover { color: var(--primary); }
+    .title-meta { display: flex; gap: .35rem; margin-top: 3px; flex-wrap: wrap; align-items: center; }
+
+    /* ===== Hover Preview Tooltip ===== */
+    .title-wrap { position: relative; }
+    .preview-tooltip {
+        display: none; position: absolute; left: 0; top: calc(100% + 6px); z-index: 30;
+        background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px;
+        padding: .85rem 1rem; width: 320px; box-shadow: 0 12px 36px rgba(0,0,0,.12);
+        animation: tooltipIn .15s ease;
+    }
+    .title-wrap:hover .preview-tooltip { display: block; }
+    @keyframes tooltipIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+    .preview-tooltip::before {
+        content: ''; position: absolute; top: -6px; left: 20px;
+        width: 10px; height: 10px; background: var(--bg-card); border-left: 1px solid var(--border);
+        border-top: 1px solid var(--border); transform: rotate(45deg);
+    }
+    .preview-tooltip-title { font-size: .82rem; font-weight: 700; color: var(--text); margin-bottom: 6px; line-height: 1.4; }
+    .preview-tooltip-excerpt { font-size: .75rem; color: var(--text-3); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+    .preview-tooltip-meta { display: flex; gap: .75rem; margin-top: 8px; font-size: .68rem; color: var(--text-3); }
+
+    /* ===== Status Toggle Animated ===== */
+    .status-toggle {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 3px 12px; border-radius: 20px; font-size: .7rem; font-weight: 600;
+        cursor: pointer; border: none; transition: all .3s cubic-bezier(.4,0,.2,1);
+        position: relative; overflow: hidden;
+    }
+    .status-toggle.published { background: #dcfce7; color: #166534; }
+    .status-toggle.draft { background: #fef3c7; color: #92400e; }
+    .status-toggle:hover { transform: scale(1.05); }
+    .status-toggle:active { transform: scale(.97); }
+    .status-toggle .status-dot {
+        width: 6px; height: 6px; border-radius: 50%; transition: all .3s ease;
+    }
+    .status-toggle.published .status-dot { background: #10b981; }
+    .status-toggle.draft .status-dot { background: #f59e0b; }
+    .status-toggle .ripple {
+        position: absolute; inset: 0; border-radius: 20px;
+        background: rgba(255,255,255,.5); transform: scale(0);
+        animation: statusRipple .4s ease-out;
+    }
+    @keyframes statusRipple { to { transform: scale(1); opacity: 0; } }
+
+    /* ===== Table Row Hover Effects ===== */
+    .data-table tbody tr { transition: all .2s ease; }
+    .data-table tbody tr:hover { background: rgba(99,102,241,.04); }
+    .data-table tbody tr:hover .row-actions { opacity: 1; transform: translateX(0); }
+    .row-actions {
+        display: flex; gap: 4px;
+        opacity: 0; transform: translateX(8px);
+        transition: all .25s cubic-bezier(.4,0,.2,1);
+    }
+    .data-table tbody tr:hover td { color: var(--text); }
+    @media (max-width: 768px) {
+        .row-actions { opacity: 1; transform: none; }
+    }
+
+    /* ===== Floating Batch Bar ===== */
+    .batch-bar {
+        position: fixed; bottom: -80px; left: 50%; transform: translateX(-50%);
+        z-index: 90; display: flex; align-items: center; gap: .6rem;
+        background: var(--text); color: rgba(255,255,255,.9);
+        padding: .65rem 1.25rem; border-radius: 14px;
+        box-shadow: 0 12px 40px rgba(0,0,0,.25);
+        transition: bottom .35s cubic-bezier(.4,0,.2,1);
+        white-space: nowrap; max-width: calc(100vw - 2rem);
+    }
+    .batch-bar.visible { bottom: 1.5rem; }
+    .batch-bar .batch-count {
+        font-size: .8rem; font-weight: 600; color: #fff;
+        display: inline-flex; align-items: center; gap: .4rem;
+        margin-right: .25rem;
+    }
+    .batch-bar .batch-count .count-num {
+        display: inline-flex; align-items: center; justify-content: center;
+        min-width: 22px; height: 22px; padding: 0 6px;
+        border-radius: 11px; background: var(--primary); font-size: .72rem;
+        font-weight: 700; transition: all .3s ease;
+    }
+    .batch-bar .batch-sep {
+        width: 1px; height: 24px; background: rgba(255,255,255,.15); margin: 0 .15rem;
+    }
+    .batch-btn {
+        display: inline-flex; align-items: center; gap: 5px;
+        padding: .35rem .75rem; border-radius: 8px; font-size: .75rem; font-weight: 500;
+        border: 1px solid rgba(255,255,255,.15); background: rgba(255,255,255,.08);
+        color: rgba(255,255,255,.85); cursor: pointer; transition: var(--transition);
+        white-space: nowrap;
+    }
+    .batch-btn:hover { background: rgba(255,255,255,.18); color: #fff; border-color: rgba(255,255,255,.3); }
+    .batch-btn.danger { border-color: rgba(239,68,68,.4); color: #fca5a5; }
+    .batch-btn.danger:hover { background: rgba(239,68,68,.2); border-color: rgba(239,68,68,.6); color: #fecaca; }
+    .batch-btn.select-all { border-color: rgba(99,102,241,.4); color: #c7d2fe; }
+    .batch-btn.select-all:hover { background: rgba(99,102,241,.2); border-color: rgba(99,102,241,.6); }
+    .batch-bar .batch-close {
+        width: 28px; height: 28px; border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        background: rgba(255,255,255,.1); border: none; color: rgba(255,255,255,.5);
+        cursor: pointer; transition: var(--transition); font-size: .75rem; margin-left: .15rem;
+    }
+    .batch-bar .batch-close:hover { background: rgba(255,255,255,.2); color: #fff; }
+
+    /* ===== Delete Confirmation Modal ===== */
+    .delete-modal-icon {
+        width: 56px; height: 56px; border-radius: 50%; margin: 0 auto 1rem;
+        display: flex; align-items: center; justify-content: center;
+        background: linear-gradient(135deg, #fee2e2, #fecaca); color: var(--accent);
+        font-size: 1.4rem;
+    }
+    .delete-modal-text { text-align: center; }
+    .delete-modal-text h4 { font-size: .95rem; font-weight: 700; color: var(--text); margin-bottom: .4rem; }
+    .delete-modal-text p { font-size: .82rem; color: var(--text-3); line-height: 1.5; }
+    .btn-danger-custom {
+        background: var(--accent); color: #fff; border: none; border-radius: 8px;
+        padding: .5rem 1.25rem; font-size: .8rem; font-weight: 600;
+        cursor: pointer; transition: var(--transition); display: inline-flex; align-items: center; gap: .4rem;
+    }
+    .btn-danger-custom:hover { background: #e11d48; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(244,63,94,.3); }
+
+    /* ===== Empty State Enhanced ===== */
+    .empty-state-enhanced {
+        text-align: center; padding: 4rem 2rem;
+    }
+    .empty-illustration {
+        width: 120px; height: 120px; margin: 0 auto 1.5rem;
+        background: linear-gradient(135deg, #ede9fe, #e0e7ff);
+        border-radius: 50%; display: flex; align-items: center; justify-content: center;
+        position: relative;
+    }
+    .empty-illustration i { font-size: 2.8rem; color: var(--primary-light); opacity: .6; }
+    .empty-illustration::after {
+        content: '+'; position: absolute; right: 8px; top: 8px;
+        width: 28px; height: 28px; border-radius: 50%;
+        background: var(--primary); color: #fff; font-size: 1rem; font-weight: 700;
+        display: flex; align-items: center; justify-content: center;
+        box-shadow: 0 2px 8px rgba(99,102,241,.4);
+    }
+    .empty-state-enhanced h3 { font-size: 1rem; font-weight: 700; color: var(--text); margin-bottom: .4rem; }
+    .empty-state-enhanced p { font-size: .82rem; color: var(--text-3); margin-bottom: 1.25rem; }
+
+    /* ===== Quick View Modal ===== */
+    .quick-view-title { font-size: 1.1rem; font-weight: 700; color: var(--text); line-height: 1.5; margin-bottom: .75rem; }
+    .quick-view-meta { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
+    .quick-view-meta-item {
+        display: flex; align-items: center; gap: .35rem;
+        font-size: .78rem; color: var(--text-3);
+    }
+    .quick-view-meta-item i { font-size: .7rem; color: var(--text-3); }
+    .quick-view-link {
+        display: inline-flex; align-items: center; gap: .4rem;
+        padding: .5rem 1rem; border-radius: 8px; font-size: .82rem; font-weight: 600;
+        color: var(--primary); background: rgba(99,102,241,.08);
+        text-decoration: none; transition: var(--transition);
+    }
+    .quick-view-link:hover { background: rgba(99,102,241,.15); color: var(--primary-dark); }
+
+    /* ===== Responsive Card Layout ===== */
+    @media (max-width: 900px) {
+        .articles-table thead { display: none; }
+        .articles-table tbody tr {
+            display: block; padding: .85rem 1rem; border-bottom: 1px solid var(--border);
+            position: relative;
+        }
+        .articles-table tbody tr:last-child { border-bottom: none; }
+        .articles-table tbody td { display: block; border: none; padding: .15rem 0; }
+        .articles-table tbody td:first-child {
+            position: absolute; right: 1rem; top: .85rem;
+        }
+        .articles-table .td-title { padding-top: 0; padding-bottom: .35rem; }
+        .articles-table .td-author { display: none; }
+        .articles-table .td-category {
+            display: inline-block; margin-right: .5rem;
+        }
+        .articles-table .td-status { display: inline-block; margin-right: .5rem; }
+        .articles-table .td-views { display: inline-block; margin-right: .5rem; }
+        .articles-table .td-views::before { content: '阅读 '; font-weight: 400; color: var(--text-3); }
+        .articles-table .td-time { display: inline-block; }
+        .articles-table .td-actions {
+            padding-top: .5rem;
+        }
+        .articles-table .td-actions .row-actions { opacity: 1; transform: none; }
+        .title-main { max-width: calc(100vw - 7rem); }
+        .preview-tooltip { display: none !important; }
+        .batch-bar { left: 1rem; right: 1rem; transform: none; justify-content: center; flex-wrap: wrap; }
+    }
+
+    /* ===== Misc ===== */
+    .views-cell {
+        font-size: .85rem; font-weight: 600; color: var(--primary);
+        display: flex; align-items: center; gap: 4px;
+    }
+    .views-cell i { font-size: .65rem; opacity: .5; }
+    .time-cell { font-size: .8rem; color: var(--text-3); white-space: nowrap; }
+    .checkbox-cell { width: 36px; }
+
+    /* Row selected highlight */
+    .data-table tbody tr.row-selected {
+        background: rgba(99,102,241,.06);
+    }
+    .data-table tbody tr.row-selected:hover {
+        background: rgba(99,102,241,.09);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="data-card">
+    <!-- Enhanced Filter Bar -->
+    <div class="articles-filter-bar">
+        <div class="filter-tabs">
+            <a href="{% url 'dashboard:articles' %}" class="filter-tab {% if not current_status and current_is_ai != '1' %}active{% endif %}">
+                全部<span class="tab-badge">{{ articles.paginator.count }}</span>
+            </a>
+            <a href="?status=published" class="filter-tab {% if current_status == 'published' %}active{% endif %}">
+                已发布<span class="tab-badge" id="badgePublished">-</span>
+            </a>
+            <a href="?status=draft" class="filter-tab {% if current_status == 'draft' %}active{% endif %}">
+                草稿<span class="tab-badge" id="badgeDraft">-</span>
+            </a>
+            <a href="?is_ai=1" class="filter-tab {% if current_is_ai == '1' %}active{% endif %}">
+                AI生成<span class="tab-badge" id="badgeAI">-</span>
+            </a>
+        </div>
+
+        {% if current_status or current_category or current_is_ai or search_query %}
+        <a href="{% url 'dashboard:articles' %}" class="filter-reset">
+            <i class="fas fa-times"></i> 清除筛选
+        </a>
+        {% endif %}
+
+        <select class="form-select-custom" onchange="location.href='?category='+this.value" style="font-size:.8rem;padding:.35rem .6rem;">
+            <option value="">所有分类</option>
+            {% for cat in categories %}
+            <option value="{{ cat.id }}" {% if current_category == cat.id|stringformat:"s" %}selected{% endif %}>{{ cat.name }}</option>
+            {% endfor %}
+        </select>
+
+        <button class="export-btn" onclick="showToast('导出功能开发中','info')">
+            <i class="fas fa-download"></i> 导出
+        </button>
+
+        <div class="search-input-wrap">
+            <i class="fas fa-search"></i>
+            <form method="get" style="display:inline;">
+                {% if current_status %}<input type="hidden" name="status" value="{{ current_status }}">{% endif %}
+                {% if current_category %}<input type="hidden" name="category" value="{{ current_category }}">{% endif %}
+                <input type="text" name="q" placeholder="搜索文章标题..." value="{{ search_query|default:'' }}">
+            </form>
+        </div>
+    </div>
+
+    <!-- Data Table -->
+    <table class="data-table articles-table">
+        <thead>
+            <tr>
+                <th class="checkbox-cell"><input type="checkbox" class="custom-check" id="checkAll" onchange="toggleAll(this)"></th>
+                <th>标题</th>
+                <th>作者</th>
+                <th>分类</th>
+                <th>状态</th>
+                <th>阅读</th>
+                <th>时间</th>
+                <th style="width:130px;">操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for a in articles %}
+            <tr id="row-{{ a.id }}" class="article-row">
+                <td class="checkbox-cell">
+                    <input type="checkbox" class="custom-check row-check" value="{{ a.id }}" onchange="updateBatch()">
+                </td>
+                <td class="td-title">
+                    <div class="title-wrap">
+                        <div class="title-cell">
+                            <div style="min-width:0;">
+                                <a class="title-main" onclick="quickView({{ a.id }},'{{ a.title|escapejs }}','{{ a.slug }}','{{ a.author.username|escapejs }}','{{ a.category.name|default:"未分类"|escapejs }}','{{ a.created_at|date:"Y-m-d H:i" }}','{{ a.views }}')">
+                                    {{ a.title }}
+                                </a>
+                                <div class="title-meta">
+                                    {% if a.is_ai_generated %}<span class="badge-status ai" style="font-size:.6rem;padding:1px 5px;"><span class="badge-dot purple"></span>AI</span>{% endif %}
+                                    {% if a.is_top %}<span class="badge-status top" style="font-size:.6rem;padding:1px 5px;">置顶</span>{% endif %}
+                                    {% if a.source_name %}<span style="font-size:.65rem;color:var(--text-3);"><i class="fas fa-globe"></i> {{ a.source_name }}</span>{% endif %}
+                                    {% if a.tags.all %}
+                                    <div class="tag-pills">
+                                        {% for tag in a.tags.all %}
+                                        <span class="tag-pill" style="background:{{ tag.color|default:'#e0e7ff' }};color:{{ tag.text_color|default:'#3730a3' }};">{{ tag.name }}</span>
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Hover Preview -->
+                        <div class="preview-tooltip">
+                            <div class="preview-tooltip-title">{{ a.title }}</div>
+                            <div class="preview-tooltip-excerpt">{{ a.excerpt|default:a.content|truncatewords:30|striptags }}</div>
+                            <div class="preview-tooltip-meta">
+                                <span><i class="fas fa-user"></i> {{ a.author.username }}</span>
+                                <span><i class="fas fa-eye"></i> {{ a.views }}</span>
+                                <span><i class="fas fa-clock"></i> {{ a.created_at|date:"Y-m-d" }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </td>
+                <td class="td-author">
+                    <div class="author-cell">
+                        <div class="author-avatar">{{ a.author.username|first|upper }}</div>
+                        <span class="author-name">{{ a.author.username }}</span>
+                    </div>
+                </td>
+                <td class="td-category">
+                    {% if a.category %}
+                    <span style="font-size:.8rem;color:var(--text-2);">{{ a.category.name }}</span>
+                    {% else %}
+                    <span style="color:var(--text-3);">-</span>
+                    {% endif %}
+                </td>
+                <td class="td-status">
+                    <button class="status-toggle {% if a.status == 'published' %}published{% else %}draft{% endif %}"
+                            id="status-{{ a.id }}"
+                            onclick="toggleStatus({{ a.id }}, this)"
+                            title="点击切换状态">
+                        <span class="status-dot"></span>
+                        <span class="status-text">{% if a.status == 'published' %}已发布{% else %}草稿{% endif %}</span>
+                    </button>
+                </td>
+                <td class="td-views">
+                    <div class="views-cell">
+                        <i class="fas fa-eye"></i>{{ a.views }}
+                    </div>
+                </td>
+                <td class="td-time">
+                    <span class="time-cell">{{ a.created_at|date:"m-d H:i" }}</span>
+                </td>
+                <td class="td-actions">
+                    <div class="row-actions">
+                        <button class="btn-sm-action" title="切换置顶" onclick="quickAction({{ a.id }},'toggle_top')">
+                            <i class="fas fa-thumbtack"></i>
+                        </button>
+                        <a href="{% url 'blog:update_article' a.slug %}" class="btn-sm-action" title="编辑" target="_blank">
+                            <i class="fas fa-pen"></i>
+                        </a>
+                        <button class="btn-sm-action danger" title="删除" onclick="confirmDelete({{ a.id }},'{{ a.title|escapejs }}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="8">
+                    <div class="empty-state-enhanced">
+                        <div class="empty-illustration">
+                            <i class="fas fa-file-alt"></i>
+                        </div>
+                        <h3>还没有文章</h3>
+                        <p>创建你的第一篇文章，开始记录和分享</p>
+                        <a href="{% url 'blog:create_article' %}" class="btn-primary-custom" target="_blank">
+                            <i class="fas fa-plus"></i> 写一篇文章
+                        </a>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Pagination -->
+    {% if articles.has_other_pages %}
+    <div class="pagination-bar">
+        <span>共 {{ articles.paginator.count }} 篇文章，第 {{ articles.number }}/{{ articles.paginator.num_pages }} 页</span>
+        <div class="page-btns">
+            {% if articles.has_previous %}
+            <a href="?page={{ articles.previous_page_number }}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_category %}&category={{ current_category }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}" class="page-btn"><i class="fas fa-chevron-left"></i></a>
+            {% endif %}
+            {% for num in articles.paginator.page_range %}
+            {% if num > articles.number|add:"-4" and num < articles.number|add:"4" %}
+            <a href="?page={{ num }}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_category %}&category={{ current_category }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}" class="page-btn {% if articles.number == num %}active{% endif %}">{{ num }}</a>
+            {% endif %}
+            {% endfor %}
+            {% if articles.has_next %}
+            <a href="?page={{ articles.next_page_number }}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_category %}&category={{ current_category }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}" class="page-btn"><i class="fas fa-chevron-right"></i></a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Floating Batch Action Bar -->
+<div class="batch-bar" id="batchBar">
+    <div class="batch-count">
+        已选 <span class="count-num" id="selectedCountNum">0</span> 项
+    </div>
+    <button class="batch-btn select-all" onclick="selectAllPage()">
+        <i class="fas fa-check-double"></i> 全选当前页
+    </button>
+    <button class="batch-btn select-all" onclick="deselectAll()">
+        <i class="fas fa-times"></i> 取消全选
+    </button>
+    <div class="batch-sep"></div>
+    <button class="batch-btn" onclick="batchAction('publish')">
+        <i class="fas fa-check"></i> 发布
+    </button>
+    <button class="batch-btn" onclick="batchAction('draft')">
+        <i class="fas fa-file"></i> 设为草稿
+    </button>
+    <button class="batch-btn" onclick="batchAction('toggle_top')">
+        <i class="fas fa-thumbtack"></i> 切换置顶
+    </button>
+    <button class="batch-btn danger" onclick="batchAction('delete')">
+        <i class="fas fa-trash"></i> 删除
+    </button>
+    <button class="batch-close" onclick="deselectAll()" title="关闭">
+        <i class="fas fa-times"></i>
+    </button>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal-overlay" id="deleteModal">
+    <div class="modal-box" style="max-width:400px;">
+        <div class="modal-header">
+            <span class="modal-title">确认删除</span>
+            <button class="modal-close" onclick="closeModal('deleteModal')"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <div class="delete-modal-icon">
+                <i class="fas fa-trash-alt"></i>
+            </div>
+            <div class="delete-modal-text">
+                <h4>确定要删除这篇文章吗？</h4>
+                <p id="deleteModalArticle" style="margin-top:.35rem;font-weight:600;color:var(--text);font-size:.85rem;"></p>
+                <p style="margin-top:.5rem;">此操作不可撤销，文章将被永久删除。</p>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-ghost-custom" onclick="closeModal('deleteModal')">取消</button>
+            <button class="btn-danger-custom" id="deleteConfirmBtn" onclick="executeDelete()">
+                <i class="fas fa-trash"></i> 确认删除
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Batch Delete Confirmation Modal -->
+<div class="modal-overlay" id="batchDeleteModal">
+    <div class="modal-box" style="max-width:400px;">
+        <div class="modal-header">
+            <span class="modal-title">批量删除确认</span>
+            <button class="modal-close" onclick="closeModal('batchDeleteModal')"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <div class="delete-modal-icon">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div class="delete-modal-text">
+                <h4 id="batchDeleteCount">确定要删除选中的文章吗？</h4>
+                <p style="margin-top:.5rem;">此操作不可撤销，所有选中的文章将被永久删除。</p>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-ghost-custom" onclick="closeModal('batchDeleteModal')">取消</button>
+            <button class="btn-danger-custom" onclick="executeBatchDelete()">
+                <i class="fas fa-trash"></i> 确认删除
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Quick View Modal -->
+<div class="modal-overlay" id="quickViewModal">
+    <div class="modal-box" style="max-width:480px;">
+        <div class="modal-header">
+            <span class="modal-title">文章预览</span>
+            <button class="modal-close" onclick="closeModal('quickViewModal')"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <div class="quick-view-title" id="qvTitle"></div>
+            <div class="quick-view-meta">
+                <span class="quick-view-meta-item"><i class="fas fa-user"></i> <span id="qvAuthor"></span></span>
+                <span class="quick-view-meta-item"><i class="fas fa-folder"></i> <span id="qvCategory"></span></span>
+                <span class="quick-view-meta-item"><i class="fas fa-clock"></i> <span id="qvTime"></span></span>
+                <span class="quick-view-meta-item"><i class="fas fa-eye"></i> <span id="qvViews"></span> 阅读</span>
+            </div>
+            <a id="qvLink" href="#" target="_blank" class="quick-view-link">
+                <i class="fas fa-external-link-alt"></i> 在新窗口打开
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// ===== State =====
+let pendingDeleteId = null;
+
+// ===== Badge Counts (count from rendered rows) =====
+(function initBadges() {
+    let pub = 0, draft = 0, ai = 0;
+    document.querySelectorAll('.article-row').forEach(row => {
+        const statusEl = row.querySelector('.status-toggle');
+        if (statusEl) {
+            if (statusEl.classList.contains('published')) pub++;
+            else draft++;
+        }
+        if (row.querySelector('.badge-status.ai')) ai++;
+    });
+    const bPub = document.getElementById('badgePublished');
+    const bDraft = document.getElementById('badgeDraft');
+    const bAI = document.getElementById('badgeAI');
+    if (bPub) bPub.textContent = pub;
+    if (bDraft) bDraft.textContent = draft;
+    if (bAI) bAI.textContent = ai;
+})();
+
+// ===== Checkbox & Batch =====
+function toggleAll(el) {
+    document.querySelectorAll('.row-check').forEach(c => {
+        c.checked = el.checked;
+        c.closest('tr')?.classList.toggle('row-selected', el.checked);
+    });
+    updateBatch();
+}
+
+function selectAllPage() {
+    document.querySelectorAll('.row-check').forEach(c => {
+        c.checked = true;
+        c.closest('tr')?.classList.add('row-selected');
+    });
+    const checkAll = document.getElementById('checkAll');
+    if (checkAll) checkAll.checked = true;
+    updateBatch();
+}
+
+function deselectAll() {
+    document.querySelectorAll('.row-check').forEach(c => {
+        c.checked = false;
+        c.closest('tr')?.classList.remove('row-selected');
+    });
+    const checkAll = document.getElementById('checkAll');
+    if (checkAll) checkAll.checked = false;
+    updateBatch();
+}
+
+function updateBatch() {
+    const checked = document.querySelectorAll('.row-check:checked');
+    const bar = document.getElementById('batchBar');
+    const countEl = document.getElementById('selectedCountNum');
+    const count = checked.length;
+
+    // Animate count
+    countEl.textContent = count;
+    countEl.style.transform = 'scale(1.3)';
+    setTimeout(() => countEl.style.transform = 'scale(1)', 200);
+
+    // Toggle bar
+    if (count > 0) {
+        bar.classList.add('visible');
+    } else {
+        bar.classList.remove('visible');
+    }
+
+    // Update row highlight
+    document.querySelectorAll('.row-check').forEach(c => {
+        c.closest('tr')?.classList.toggle('row-selected', c.checked);
+    });
+
+    // Update checkAll state
+    const allChecks = document.querySelectorAll('.row-check');
+    const checkAll = document.getElementById('checkAll');
+    if (checkAll) {
+        checkAll.checked = allChecks.length > 0 && checked.length === allChecks.length;
+    }
+}
+
+// ===== Batch Actions =====
+async function batchAction(action) {
+    const ids = [...document.querySelectorAll('.row-check:checked')].map(c => c.value);
+    if (!ids.length) return;
+
+    if (action === 'delete') {
+        const count = ids.length;
+        document.getElementById('batchDeleteCount').textContent = `确定要删除选中的 ${count} 篇文章吗？`;
+        openModal('batchDeleteModal');
+        return;
+    }
+
+    const res = await postAction('{% url "dashboard:article_action" %}', { action, ids });
+    if (res.message) {
+        showToast(res.message);
+        setTimeout(() => location.reload(), 800);
+    } else if (res.error) {
+        showToast(res.error, 'error');
+    }
+}
+
+async function executeBatchDelete() {
+    closeModal('batchDeleteModal');
+    const ids = [...document.querySelectorAll('.row-check:checked')].map(c => c.value);
+    if (!ids.length) return;
+
+    const res = await postAction('{% url "dashboard:article_action" %}', { action: 'delete', ids });
+    if (res.message) {
+        showToast(res.message);
+        setTimeout(() => location.reload(), 800);
+    } else if (res.error) {
+        showToast(res.error, 'error');
+    }
+}
+
+// ===== Status Toggle with Animation =====
+async function toggleStatus(id, btn) {
+    // Add ripple
+    const ripple = document.createElement('span');
+    ripple.className = 'ripple';
+    btn.appendChild(ripple);
+    setTimeout(() => ripple.remove(), 400);
+
+    const res = await postAction(`/dashboard/articles/${id}/action/`, { action: 'toggle_status' });
+    if (res.status !== undefined || res.message) {
+        const isPublished = res.status === 'published' || (btn.classList.contains('draft'));
+        btn.classList.toggle('published', isPublished);
+        btn.classList.toggle('draft', !isPublished);
+        btn.querySelector('.status-text').textContent = isPublished ? '已发布' : '草稿';
+        showToast('状态已更新');
+    } else if (res.error) {
+        showToast(res.error, 'error');
+    }
+}
+
+// ===== Quick Actions =====
+async function quickAction(id, action) {
+    if (action === 'toggle_status') return; // handled by toggleStatus
+
+    const res = await postAction(`/dashboard/articles/${id}/action/`, { action });
+    if (res.message || res.status !== undefined || res.is_top !== undefined) {
+        if (action === 'delete') {
+            const row = document.getElementById('row-' + id);
+            if (row) {
+                row.style.transition = 'all .3s ease';
+                row.style.opacity = '0';
+                row.style.transform = 'translateX(20px)';
+                setTimeout(() => row.remove(), 300);
+            }
+            showToast('文章已删除');
+        } else {
+            showToast('操作成功');
+            setTimeout(() => location.reload(), 600);
+        }
+    } else if (res.error) {
+        showToast(res.error, 'error');
+    }
+}
+
+// ===== Delete Confirmation =====
+function confirmDelete(id, title) {
+    pendingDeleteId = id;
+    document.getElementById('deleteModalArticle').textContent = `"${title}"`;
+    openModal('deleteModal');
+}
+
+async function executeDelete() {
+    closeModal('deleteModal');
+    if (pendingDeleteId) {
+        await quickAction(pendingDeleteId, 'delete');
+        pendingDeleteId = null;
+    }
+}
+
+// ===== Quick View Modal =====
+function quickView(id, title, slug, author, category, time, views) {
+    document.getElementById('qvTitle').textContent = title;
+    document.getElementById('qvAuthor').textContent = author;
+    document.getElementById('qvCategory').textContent = category;
+    document.getElementById('qvTime').textContent = time;
+    document.getElementById('qvViews').textContent = views;
+    document.getElementById('qvLink').href = '{% url "blog:article_detail" "PLACEHOLDER" %}'.replace('PLACEHOLDER', slug);
+    openModal('quickViewModal');
+}
+
+// ===== Close modals on overlay click =====
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+            overlay.classList.remove('show');
+        }
+    });
+});
+
+// ===== Close modals on Escape =====
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        document.querySelectorAll('.modal-overlay.show').forEach(m => m.classList.remove('show'));
+    }
+});
+</script>
+{% endblock %}

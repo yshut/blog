@@ -1,31 +1,56 @@
 {% extends 'base.html' %}
 
-{% block title %}{{ title }} - 咨询博客{% endblock %}
+{% block title %}{{ title }} - NewsFlow{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/tinymce@6/tinymce.min.js" referrerpolicy="origin"></script>
+{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-lg-8">
-        <div class="article-detail">
-            <h2 class="mb-4"><i class="fas fa-pen"></i> {{ title }}</h2>
+    <div class="col-lg-9">
+        <div class="article-detail slide-up">
+            <!-- Header -->
+            <div class="form-header mb-4">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="form-header-icon">
+                        <i class="fas fa-pen"></i>
+                    </div>
+                    <div>
+                        <h2 class="form-header-title">{{ title }}</h2>
+                        <p class="form-header-desc">填写以下信息来创建或编辑您的资讯文章</p>
+                    </div>
+                </div>
+            </div>
 
             <form method="post" enctype="multipart/form-data">
                 {% csrf_token %}
 
-                <div class="mb-3">
-                    <label for="id_title" class="form-label">文章标题 *</label>
-                    <input type="text" class="form-control" id="id_title" name="title"
-                           value="{{ form.title.value|default:'' }}" required>
+                <!-- Title -->
+                <div class="mb-4">
+                    <label for="id_title" class="form-label">
+                        <i class="fas fa-heading" style="color: var(--primary);"></i> 文章标题 <span class="text-danger">*</span>
+                    </label>
+                    <input type="text" class="form-control form-control-lg" id="id_title" name="title"
+                           value="{{ form.title.value|default:'' }}" placeholder="请输入一个吸引人的标题..." required
+                           style="font-weight: 600; font-size: 1.1rem;">
                 </div>
 
-                <div class="mb-3">
-                    <label for="id_content" class="form-label">文章内容 *</label>
-                    <textarea class="form-control" id="id_content" name="content" rows="10" required>{{ form.content.value|default:'' }}</textarea>
+                <!-- Content -->
+                <div class="mb-4">
+                    <label for="id_content" class="form-label">
+                        <i class="fas fa-file-alt" style="color: var(--primary);"></i> 文章内容 <span class="text-danger">*</span>
+                    </label>
+                    <textarea class="form-control" id="id_content" name="content" rows="12" required>{{ form.content.value|default:'' }}</textarea>
                 </div>
 
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <label for="id_category" class="form-label">分类</label>
-                        <select class="form-control" id="id_category" name="category">
+                <!-- Category & Status -->
+                <div class="row mb-4">
+                    <div class="col-md-6 mb-3 mb-md-0">
+                        <label for="id_category" class="form-label">
+                            <i class="fas fa-folder" style="color: var(--accent);"></i> 分类
+                        </label>
+                        <select class="form-select" id="id_category" name="category">
                             <option value="">-- 选择分类 --</option>
                             {% for cat in form.category.field.queryset %}
                             <option value="{{ cat.id }}" {% if form.category.value|stringformat:"s" == cat.id|stringformat:"s" %}selected{% endif %}>
@@ -35,54 +60,87 @@
                         </select>
                     </div>
                     <div class="col-md-6">
-                        <label for="id_status" class="form-label">状态</label>
-                        <select class="form-control" id="id_status" name="status">
-                            <option value="draft" {% if form.status.value == 'draft' %}selected{% endif %}>草稿</option>
-                            <option value="published" {% if form.status.value == 'published' %}selected{% endif %}>发布</option>
+                        <label for="id_status" class="form-label">
+                            <i class="fas fa-toggle-on" style="color: var(--success);"></i> 发布状态
+                        </label>
+                        <select class="form-select" id="id_status" name="status">
+                            <option value="draft" {% if form.status.value == 'draft' %}selected{% endif %}>
+                                草稿
+                            </option>
+                            <option value="published" {% if form.status.value == 'published' %}selected{% endif %}>
+                                立即发布
+                            </option>
                         </select>
                     </div>
                 </div>
 
-                <div class="mb-3">
-                    <label class="form-label">标签</label>
-                    <div class="d-flex flex-wrap gap-2">
+                <!-- Tags -->
+                <div class="mb-4">
+                    <label class="form-label">
+                        <i class="fas fa-tags" style="color: var(--secondary);"></i> 标签
+                    </label>
+                    <div class="tags-selector">
                         {% for tag in form.tags.field.queryset %}
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="tags" value="{{ tag.id }}"
-                                   id="tag-{{ tag.id }}"
+                        <label class="tag-checkbox">
+                            <input type="checkbox" name="tags" value="{{ tag.id }}"
                                    {% if tag.id in form.tags.value %}checked{% endif %}>
-                            <label class="form-check-label" for="tag-{{ tag.id }}">{{ tag.name }}</label>
-                        </div>
+                            <span class="tag-checkbox-label">{{ tag.name }}</span>
+                        </label>
                         {% endfor %}
                     </div>
                 </div>
 
-                <div class="mb-3">
-                    <label for="id_cover_image" class="form-label">封面图片</label>
-                    <input type="file" class="form-control" id="id_cover_image" name="cover_image" accept="image/*">
+                <!-- Cover Image -->
+                <div class="mb-4">
+                    <label for="id_cover_image" class="form-label">
+                        <i class="fas fa-image" style="color: var(--warning);"></i> 封面图片
+                    </label>
+                    <div class="file-upload-area" id="fileUploadArea">
+                        <input type="file" class="form-control" id="id_cover_image" name="cover_image" accept="image/*"
+                               style="display: none;" onchange="previewImage(this)">
+                        <div class="file-upload-content" onclick="document.getElementById('id_cover_image').click()">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <p>点击上传封面图片</p>
+                            <span>支持 JPG, PNG, GIF 格式</span>
+                        </div>
+                    </div>
                     {% if article.cover_image %}
-                    <div class="mt-2">
-                        <img src="{{ article.cover_image.url }}" alt="当前封面" style="max-height: 150px;">
+                    <div class="mt-2 position-relative" style="display: inline-block;">
+                        <img src="{{ article.cover_image.url }}" alt="当前封面" class="rounded-3" style="max-height: 150px;">
+                        <span class="badge" style="position: absolute; top: 8px; left: 8px; background: rgba(0,0,0,0.6); color: white; font-size: 0.7rem;">当前封面</span>
                     </div>
                     {% endif %}
+                    <div id="imagePreview" style="display: none;" class="mt-2">
+                        <img id="previewImg" class="rounded-3" style="max-height: 150px;">
+                    </div>
                 </div>
 
-                <div class="mb-3">
-                    <label for="id_excerpt" class="form-label">摘要（可选，留空自动生成）</label>
-                    <textarea class="form-control" id="id_excerpt" name="excerpt" rows="3">{{ form.excerpt.value|default:'' }}</textarea>
+                <!-- Excerpt -->
+                <div class="mb-4">
+                    <label for="id_excerpt" class="form-label">
+                        <i class="fas fa-align-left" style="color: var(--text-muted);"></i> 摘要
+                        <span style="font-weight: 400; color: var(--text-muted); font-size: 0.8rem;">（可选，留空自动生成）</span>
+                    </label>
+                    <textarea class="form-control" id="id_excerpt" name="excerpt" rows="3"
+                              placeholder="简要描述文章内容...">{{ form.excerpt.value|default:'' }}</textarea>
                 </div>
 
-                <div class="mb-3 form-check">
-                    <input type="checkbox" class="form-check-input" id="id_allow_comment" name="allow_comment"
-                           {% if form.allow_comment.value or form.allow_comment.value == None %}checked{% endif %}>
-                    <label class="form-check-label" for="id_allow_comment">允许评论</label>
+                <!-- Allow Comment -->
+                <div class="mb-4">
+                    <label class="toggle-switch">
+                        <input type="checkbox" name="allow_comment"
+                               {% if form.allow_comment.value or form.allow_comment.value == None %}checked{% endif %}>
+                        <span class="toggle-slider"></span>
+                        <span class="toggle-label">允许评论</span>
+                    </label>
                 </div>
 
-                <div class="d-flex gap-2">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save"></i> 保存
+                <!-- Actions -->
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="fas fa-save"></i> 保存文章
                     </button>
-                    <a href="{% url 'blog:index' %}" class="btn btn-outline-secondary">
+                    <a href="{% url 'blog:index' %}" class="btn btn-ghost btn-lg">
                         <i class="fas fa-times"></i> 取消
                     </a>
                 </div>
@@ -90,4 +148,213 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-header-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: var(--radius-md);
+        background: var(--gradient-primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.2rem;
+    }
+
+    .form-header-title {
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 0.15rem;
+    }
+
+    .form-header-desc {
+        color: var(--text-muted);
+        font-size: 0.85rem;
+        margin-bottom: 0;
+    }
+
+    .form-control-lg {
+        padding: 0.75rem 1rem;
+    }
+
+    /* Tags Selector */
+    .tags-selector {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .tag-checkbox {
+        cursor: pointer;
+    }
+
+    .tag-checkbox input {
+        display: none;
+    }
+
+    .tag-checkbox-label {
+        display: inline-block;
+        padding: 0.35rem 0.85rem;
+        border-radius: 50px;
+        border: 1px solid var(--border-color);
+        font-size: 0.8rem;
+        font-weight: 500;
+        color: var(--text-secondary);
+        transition: var(--transition);
+        cursor: pointer;
+    }
+
+    .tag-checkbox input:checked + .tag-checkbox-label {
+        background: var(--primary);
+        color: white;
+        border-color: var(--primary);
+    }
+
+    .tag-checkbox-label:hover {
+        border-color: var(--primary);
+        color: var(--primary);
+    }
+
+    /* File Upload */
+    .file-upload-area {
+        border: 2px dashed var(--border-color);
+        border-radius: var(--radius-md);
+        transition: var(--transition);
+        cursor: pointer;
+    }
+
+    .file-upload-area:hover {
+        border-color: var(--primary);
+        background: rgba(99, 102, 241, 0.03);
+    }
+
+    .file-upload-content {
+        text-align: center;
+        padding: 2rem;
+        color: var(--text-muted);
+    }
+
+    .file-upload-content i {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+        color: var(--primary-light);
+    }
+
+    .file-upload-content p {
+        margin-bottom: 0.25rem;
+        font-weight: 500;
+        color: var(--text-secondary);
+    }
+
+    .file-upload-content span {
+        font-size: 0.8rem;
+    }
+
+    /* Toggle Switch */
+    .toggle-switch {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        cursor: pointer;
+    }
+
+    .toggle-switch input {
+        display: none;
+    }
+
+    .toggle-slider {
+        width: 44px;
+        height: 24px;
+        background: var(--border-color);
+        border-radius: 12px;
+        position: relative;
+        transition: var(--transition);
+    }
+
+    .toggle-slider::after {
+        content: '';
+        width: 18px;
+        height: 18px;
+        background: white;
+        border-radius: 50%;
+        position: absolute;
+        top: 3px;
+        left: 3px;
+        transition: var(--transition);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+
+    .toggle-switch input:checked + .toggle-slider {
+        background: var(--primary);
+    }
+
+    .toggle-switch input:checked + .toggle-slider::after {
+        transform: translateX(20px);
+    }
+
+    .toggle-label {
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: var(--text-secondary);
+    }
+
+    /* Form Actions */
+    .form-actions {
+        display: flex;
+        gap: 1rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid var(--border-color);
+    }
+
+    .btn-lg {
+        padding: 0.75rem 2rem;
+        font-size: 0.95rem;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // TinyMCE Init
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    tinymce.init({
+        selector: '#id_content',
+        height: 450,
+        language: 'zh_CN',
+        skin: isDark ? 'oxide-dark' : 'oxide',
+        content_css: isDark ? 'dark' : 'default',
+        plugins: [
+            'advlist', 'autolink', 'lists', 'link', 'image', 'charmap',
+            'preview', 'anchor', 'searchreplace', 'visualblocks', 'code',
+            'fullscreen', 'insertdatetime', 'media', 'table', 'help',
+            'wordcount', 'codesample', 'emoticons'
+        ],
+        toolbar: 'undo redo | formatselect | bold italic forecolor backcolor | ' +
+                 'alignleft aligncenter alignright alignjustify | ' +
+                 'bullist numlist outdent indent | link image media | ' +
+                 'codesample emoticons | removeformat | fullscreen',
+        menubar: true,
+        relative_urls: false,
+        remove_script_host: false,
+        branding: false,
+        promotion: false,
+    });
+
+    // Image Preview
+    function previewImage(input) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('previewImg').src = e.target.result;
+                document.getElementById('imagePreview').style.display = 'block';
+                document.querySelector('.file-upload-content p').textContent = input.files[0].name;
+            };
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+</script>
 {% endblock %}

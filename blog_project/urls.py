@@ -7,7 +7,8 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    path('admin/', admin.site.urls),  # Django原生admin保留
+    path('dashboard/', include('blog.admin_urls')),  # 自定义后台管理
     path('tinymce/', include('tinymce.urls')),
     path('api/', include('blog.api_urls')),  # API接口
     path('', include('blog.urls')),  # 博客前端页面

@@ -1,0 +1,196 @@
+{% extends 'admin_custom/base.html' %}
+
+{% block page_title %}API 密钥管理{% endblock %}
+
+{% block content %}
+<div class="data-card">
+    <div class="data-card-header">
+        <span class="data-card-title"><i class="fas fa-key" style="color:#f59e0b;margin-right:.4rem;"></i> API 密钥</span>
+        <button class="btn-primary-custom" onclick="openModal('keyModal')">
+            <i class="fas fa-plus"></i> 创建密钥
+        </button>
+    </div>
+
+    <!-- Info Banner -->
+    <div style="padding:.75rem 1.25rem;background:rgba(6,182,212,.04);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:.6rem;">
+        <i class="fas fa-info-circle" style="color:#06b6d4;"></i>
+        <span style="font-size:.8rem;color:var(--text-2);">
+            使用 API 密钥可以让 AI（如 OpenClaw）自动搜索资讯并发布到博客。请求头：<code style="background:var(--bg);padding:1px 6px;border-radius:4px;font-size:.75rem;">Authorization: Bearer &lt;api_key&gt;</code>
+        </span>
+    </div>
+
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>名称</th>
+                <th>密钥</th>
+                <th>权限</th>
+                <th>状态</th>
+                <th>最后使用</th>
+                <th>创建时间</th>
+                <th style="width:90px;">操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for k in keys %}
+            <tr id="key-{{ k.id }}">
+                <td>
+                    <div>
+                        <span style="font-weight:600;font-size:.85rem;color:var(--text);">{{ k.name }}</span>
+                        {% if k.description %}<br><span style="font-size:.7rem;color:var(--text-3);">{{ k.description }}</span>{% endif %}
+                    </div>
+                </td>
+                <td>
+                    <div style="display:flex;align-items:center;gap:.4rem;">
+                        <code style="font-size:.75rem;color:var(--text-3);background:var(--bg);padding:2px 6px;border-radius:4px;" id="keyval-{{ k.id }}">{{ k.key|truncatechars:16 }}</code>
+                        <button class="btn-sm-action" title="复制完整密钥" onclick="copyKey('{{ k.key }}')">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </div>
+                </td>
+                <td>
+                    <div style="display:flex;gap:3px;flex-wrap:wrap;">
+                        {% if k.can_create_article %}<span style="background:rgba(16,185,129,.1);color:#10b981;padding:1px 6px;border-radius:8px;font-size:.65rem;font-weight:600;">创建</span>{% endif %}
+                        {% if k.can_update_article %}<span style="background:rgba(99,102,241,.1);color:#6366f1;padding:1px 6px;border-radius:8px;font-size:.65rem;font-weight:600;">更新</span>{% endif %}
+                        {% if k.can_delete_article %}<span style="background:rgba(244,63,94,.1);color:#f43f5e;padding:1px 6px;border-radius:8px;font-size:.65rem;font-weight:600;">删除</span>{% endif %}
+                        {% if not k.can_create_article and not k.can_update_article and not k.can_delete_article %}
+                        <span style="color:var(--text-3);font-size:.75rem;">无权限</span>
+                        {% endif %}
+                    </div>
+                </td>
+                <td>
+                    {% if k.is_active %}
+                    <span class="badge-status active"><span class="badge-dot green"></span>有效</span>
+                    {% else %}
+                    <span class="badge-status disabled"><span class="badge-dot" style="background:#94a3b8;"></span>已禁用</span>
+                    {% endif %}
+                </td>
+                <td style="font-size:.8rem;color:var(--text-3);white-space:nowrap;">
+                    {% if k.last_used_at %}{{ k.last_used_at|date:"m-d H:i" }}{% else %}<span style="color:var(--text-3);">从未使用</span>{% endif %}
+                </td>
+                <td style="font-size:.8rem;color:var(--text-3);white-space:nowrap;">{{ k.created_at|date:"Y-m-d" }}</td>
+                <td>
+                    <div style="display:flex;gap:4px;">
+                        <button class="btn-sm-action success" title="{% if k.is_active %}禁用{% else %}启用{% endif %}" onclick="toggleKey({{ k.id }})">
+                            <i class="fas fa-{% if k.is_active %}pause{% else %}play{% endif %}"></i>
+                        </button>
+                        <button class="btn-sm-action danger" title="删除" onclick="if(confirm('确定删除此密钥？'))deleteKey({{ k.id }})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="7">
+                    <div class="empty-state">
+                        <i class="fas fa-key"></i>
+                        <p>暂无 API 密钥，点击上方按钮创建</p>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Create Key Modal -->
+<div class="modal-overlay" id="keyModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <span class="modal-title">创建 API 密钥</span>
+            <button class="modal-close" onclick="closeModal('keyModal')"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <div style="margin-bottom:1rem;">
+                <label class="form-label-custom">密钥名称 *</label>
+                <input type="text" class="form-input" id="keyName" placeholder="如：OpenClaw 资讯采集">
+            </div>
+            <div style="margin-bottom:1rem;">
+                <label class="form-label-custom">描述（可选）</label>
+                <input type="text" class="form-input" id="keyDesc" placeholder="用途说明">
+            </div>
+            <div style="margin-bottom:.5rem;">
+                <label class="form-label-custom">权限设置</label>
+            </div>
+            <div style="display:flex;gap:1rem;margin-bottom:1rem;">
+                <label style="display:flex;align-items:center;gap:.4rem;font-size:.85rem;color:var(--text-2);cursor:pointer;">
+                    <input type="checkbox" class="custom-check" id="keyCreate" checked> 创建文章
+                </label>
+                <label style="display:flex;align-items:center;gap:.4rem;font-size:.85rem;color:var(--text-2);cursor:pointer;">
+                    <input type="checkbox" class="custom-check" id="keyUpdate"> 更新文章
+                </label>
+                <label style="display:flex;align-items:center;gap:.4rem;font-size:.85rem;color:var(--text-2);cursor:pointer;">
+                    <input type="checkbox" class="custom-check" id="keyDelete"> 删除文章
+                </label>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-ghost-custom" onclick="closeModal('keyModal')">取消</button>
+            <button class="btn-primary-custom" onclick="createKey()"><i class="fas fa-check"></i> 创建</button>
+        </div>
+    </div>
+</div>
+
+<!-- Show Key Modal -->
+<div class="modal-overlay" id="showKeyModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <span class="modal-title">密钥已创建</span>
+            <button class="modal-close" onclick="closeModal('showKeyModal')"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:8px;padding:.75rem 1rem;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem;">
+                <i class="fas fa-exclamation-triangle" style="color:#f59e0b;"></i>
+                <span style="font-size:.8rem;color:#92400e;">请立即复制并妥善保管此密钥，关闭后将无法再次查看完整密钥。</span>
+            </div>
+            <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;display:flex;align-items:center;gap:.5rem;">
+                <code style="flex:1;font-size:.8rem;word-break:break-all;color:var(--text);" id="newKeyValue"></code>
+                <button class="btn-sm-action" onclick="copyNewKey()" title="复制"><i class="fas fa-copy"></i></button>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-primary-custom" onclick="closeModal('showKeyModal');location.reload();">知道了</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function copyKey(key) {
+    navigator.clipboard.writeText(key).then(() => showToast('密钥已复制'));
+}
+function copyNewKey() {
+    const key = document.getElementById('newKeyValue').textContent;
+    navigator.clipboard.writeText(key).then(() => showToast('密钥已复制'));
+}
+
+async function createKey() {
+    const name = document.getElementById('keyName').value.trim();
+    const description = document.getElementById('keyDesc').value.trim();
+    const can_create = document.getElementById('keyCreate').checked ? '1' : '0';
+    const can_update = document.getElementById('keyUpdate').checked ? '1' : '0';
+    const can_delete = document.getElementById('keyDelete').checked ? '1' : '0';
+    if (!name) { showToast('请输入密钥名称', 'error'); return; }
+    const res = await postAction('{% url "dashboard:apikey_create" %}', { name, description, can_create, can_update, can_delete });
+    if (res.key) {
+        closeModal('keyModal');
+        document.getElementById('newKeyValue').textContent = res.key;
+        openModal('showKeyModal');
+        showToast(res.message);
+    } else if (res.error) showToast(res.error, 'error');
+}
+
+async function toggleKey(id) {
+    const res = await postAction(`/dashboard/apikeys/${id}/toggle/`);
+    showToast('操作成功');
+    setTimeout(() => location.reload(), 600);
+}
+
+async function deleteKey(id) {
+    const res = await postAction(`/dashboard/apikeys/${id}/delete/`);
+    if (res.message) { document.getElementById('key-' + id)?.remove(); showToast(res.message); }
+}
+</script>
+{% endblock %}

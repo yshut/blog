@@ -1,0 +1,967 @@
+{% extends 'admin_custom/base.html' %}
+
+{% block page_title %}评论管理{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ===== Stats Cards ===== */
+    .comment-stats {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: .75rem;
+        padding: 1.25rem 1.25rem .5rem;
+    }
+    .comment-stat-card {
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: .85rem 1rem;
+        display: flex;
+        align-items: center;
+        gap: .75rem;
+        transition: var(--transition);
+    }
+    .comment-stat-card:hover {
+        box-shadow: var(--shadow);
+        transform: translateY(-1px);
+    }
+    .comment-stat-icon {
+        width: 38px; height: 38px;
+        border-radius: 9px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: .9rem;
+        flex-shrink: 0;
+    }
+    .comment-stat-icon.total { background: rgba(99,102,241,.1); color: var(--primary); }
+    .comment-stat-icon.pending { background: rgba(239,68,68,.1); color: #ef4444; }
+    .comment-stat-icon.approved { background: rgba(16,185,129,.1); color: var(--success); }
+    .comment-stat-value {
+        font-size: 1.35rem; font-weight: 800; line-height: 1.2; color: var(--text);
+    }
+    .comment-stat-label {
+        font-size: .7rem; color: var(--text-3); margin-top: 1px;
+    }
+
+    /* ===== Approve All Button ===== */
+    .approve-all-bar {
+        display: flex;
+        align-items: center;
+        gap: .75rem;
+        padding: .65rem 1.25rem;
+        background: linear-gradient(135deg, rgba(245,158,11,.06), rgba(239,68,68,.04));
+        border-bottom: 1px solid var(--border);
+    }
+    .approve-all-bar .info-text {
+        font-size: .8rem;
+        color: var(--text-2);
+        flex: 1;
+    }
+    .approve-all-bar .info-text strong {
+        color: #ef4444;
+        font-weight: 700;
+    }
+    .btn-approve-all {
+        background: linear-gradient(135deg, var(--success), #059669);
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        padding: .45rem 1.1rem;
+        font-size: .78rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: var(--transition);
+        display: inline-flex;
+        align-items: center;
+        gap: .4rem;
+        white-space: nowrap;
+    }
+    .btn-approve-all:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 14px rgba(16,185,129,.35);
+    }
+
+    /* ===== Commenter Info ===== */
+    .commenter-wrap {
+        display: flex;
+        align-items: center;
+        gap: .55rem;
+    }
+    .commenter-avatar {
+        width: 32px; height: 32px;
+        border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        color: #fff;
+        font-size: .65rem;
+        font-weight: 700;
+        flex-shrink: 0;
+    }
+    .commenter-avatar.registered { background: linear-gradient(135deg, #6366f1, #8b5cf6); }
+    .commenter-avatar.guest { background: linear-gradient(135deg, #f59e0b, #f97316); }
+    .commenter-name {
+        font-weight: 600; font-size: .8rem; color: var(--text);
+        display: flex; align-items: center; gap: .35rem;
+    }
+    .commenter-badge {
+        font-size: .6rem;
+        font-weight: 600;
+        padding: 1px 6px;
+        border-radius: 4px;
+        white-space: nowrap;
+    }
+    .commenter-badge.registered {
+        background: rgba(99,102,241,.1);
+        color: var(--primary);
+    }
+    .commenter-badge.guest {
+        background: rgba(245,158,11,.1);
+        color: #d97706;
+    }
+    .commenter-meta {
+        font-size: .68rem;
+        color: var(--text-3);
+        margin-top: 1px;
+    }
+    .commenter-meta .ip-label {
+        margin-left: .25rem;
+        padding-left: .35rem;
+        border-left: 1px solid var(--border);
+    }
+
+    /* ===== Comment Content ===== */
+    .comment-content-wrap {
+        max-width: 280px;
+        position: relative;
+    }
+    .comment-text-short {
+        font-size: .8rem;
+        color: var(--text-2);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        cursor: pointer;
+        transition: var(--transition);
+    }
+    .comment-text-short:hover {
+        color: var(--text);
+    }
+    .comment-text-full {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height .35s cubic-bezier(0.4, 0, 0.2, 1), opacity .25s ease, padding .3s ease;
+        opacity: 0;
+        font-size: .78rem;
+        color: var(--text-2);
+        line-height: 1.6;
+        background: var(--bg);
+        border-radius: 8px;
+        padding: 0 .75rem;
+        margin-top: 0;
+        word-break: break-word;
+    }
+    .comment-text-full.expanded {
+        max-height: 300px;
+        overflow-y: auto;
+        opacity: 1;
+        padding: .6rem .75rem;
+        margin-top: .4rem;
+    }
+    .comment-expand-hint {
+        font-size: .65rem;
+        color: var(--primary);
+        cursor: pointer;
+        margin-top: 2px;
+        display: inline-flex;
+        align-items: center;
+        gap: .2rem;
+        transition: var(--transition);
+    }
+    .comment-expand-hint:hover {
+        color: var(--primary-dark);
+    }
+    .comment-expand-hint i {
+        font-size: .55rem;
+        transition: transform .25s ease;
+    }
+    .comment-expand-hint.active i {
+        transform: rotate(180deg);
+    }
+
+    /* ===== Article Link ===== */
+    .article-link-wrap {
+        display: inline-flex;
+        align-items: center;
+        gap: .3rem;
+        max-width: 170px;
+        position: relative;
+    }
+    .article-link {
+        font-size: .8rem;
+        color: var(--primary);
+        text-decoration: none;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        display: block;
+        transition: var(--transition);
+    }
+    .article-link:hover {
+        color: var(--primary-dark);
+    }
+    .article-link-icon {
+        font-size: .6rem;
+        color: var(--text-3);
+        flex-shrink: 0;
+        opacity: 0;
+        transform: translateX(-3px);
+        transition: var(--transition);
+    }
+    .article-link-wrap:hover .article-link-icon {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    .article-link-wrap[data-tooltip]:hover::after {
+        content: attr(data-tooltip);
+        position: absolute;
+        bottom: calc(100% + 6px);
+        left: 0;
+        background: var(--text);
+        color: #fff;
+        font-size: .7rem;
+        padding: .35rem .6rem;
+        border-radius: 6px;
+        white-space: nowrap;
+        max-width: 280px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        z-index: 10;
+        pointer-events: none;
+        animation: tooltipIn .15s ease;
+    }
+    @keyframes tooltipIn {
+        from { opacity: 0; transform: translateY(3px); }
+        to { opacity: 1; transform: none; }
+    }
+
+    /* ===== Status Badge with Animation ===== */
+    .status-badge-wrap {
+        transition: var(--transition);
+    }
+    .status-badge-wrap.animating {
+        animation: statusPulse .4s ease;
+    }
+    @keyframes statusPulse {
+        0% { transform: scale(1); }
+        40% { transform: scale(1.15); }
+        100% { transform: scale(1); }
+    }
+
+    /* ===== Time Display ===== */
+    .time-display {
+        white-space: nowrap;
+    }
+    .time-absolute {
+        font-size: .8rem;
+        color: var(--text-3);
+    }
+    .time-relative {
+        font-size: .68rem;
+        color: var(--text-3);
+        opacity: .7;
+        display: block;
+        margin-top: 1px;
+    }
+
+    /* ===== Quick Reply ===== */
+    .reply-form-wrap {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height .35s cubic-bezier(0.4, 0, 0.2, 1), opacity .25s ease;
+        opacity: 0;
+    }
+    .reply-form-wrap.open {
+        max-height: 200px;
+        opacity: 1;
+    }
+    .reply-form-inner {
+        padding: .65rem 1rem;
+        background: rgba(99,102,241,.03);
+        border-top: 1px solid var(--border);
+        display: flex;
+        gap: .5rem;
+        align-items: flex-start;
+    }
+    .reply-input {
+        flex: 1;
+        padding: .45rem .7rem;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        font-size: .8rem;
+        font-family: inherit;
+        color: var(--text);
+        background: var(--bg-card);
+        resize: none;
+        min-height: 36px;
+        max-height: 80px;
+        transition: var(--transition);
+    }
+    .reply-input:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(99,102,241,.1);
+    }
+    .reply-send-btn {
+        background: var(--primary);
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        padding: .45rem .85rem;
+        font-size: .75rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: var(--transition);
+        white-space: nowrap;
+        display: inline-flex;
+        align-items: center;
+        gap: .3rem;
+    }
+    .reply-send-btn:hover {
+        background: var(--primary-dark);
+    }
+    .reply-cancel-btn {
+        background: none;
+        color: var(--text-3);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: .45rem .7rem;
+        font-size: .75rem;
+        cursor: pointer;
+        transition: var(--transition);
+    }
+    .reply-cancel-btn:hover {
+        color: var(--text-2);
+        border-color: var(--text-3);
+    }
+
+    /* ===== Delete Confirmation Modal ===== */
+    .delete-modal-icon {
+        width: 56px; height: 56px;
+        border-radius: 50%;
+        background: rgba(239,68,68,.1);
+        display: flex; align-items: center; justify-content: center;
+        margin: 0 auto 1rem;
+        font-size: 1.4rem;
+        color: #ef4444;
+    }
+    .delete-modal-text {
+        text-align: center;
+        font-size: .9rem;
+        color: var(--text-2);
+        line-height: 1.6;
+    }
+    .delete-modal-text strong {
+        color: var(--text);
+    }
+    .btn-danger-custom {
+        background: #ef4444;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        padding: .5rem 1.25rem;
+        font-size: .8rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: var(--transition);
+        display: inline-flex;
+        align-items: center;
+        gap: .4rem;
+    }
+    .btn-danger-custom:hover {
+        background: #dc2626;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(239,68,68,.3);
+    }
+
+    /* ===== Empty State Enhanced ===== */
+    .empty-state-enhanced {
+        text-align: center;
+        padding: 3.5rem 2rem;
+    }
+    .empty-state-icon {
+        width: 72px; height: 72px;
+        border-radius: 50%;
+        background: var(--bg);
+        display: flex; align-items: center; justify-content: center;
+        margin: 0 auto 1rem;
+        font-size: 1.8rem;
+        color: var(--text-3);
+        opacity: .5;
+    }
+    .empty-state-title {
+        font-size: .95rem;
+        font-weight: 700;
+        color: var(--text-2);
+        margin-bottom: .35rem;
+    }
+    .empty-state-desc {
+        font-size: .8rem;
+        color: var(--text-3);
+        max-width: 300px;
+        margin: 0 auto;
+        line-height: 1.5;
+    }
+
+    /* ===== Action Buttons Row ===== */
+    .action-btns-row {
+        display: flex;
+        gap: 4px;
+        flex-wrap: nowrap;
+    }
+
+    /* ===== Row Transition ===== */
+    .data-table tbody tr {
+        transition: background .2s ease, opacity .3s ease, transform .3s ease;
+    }
+    .data-table tbody tr.removing {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+
+    /* ===== Responsive Stats ===== */
+    @media (max-width: 768px) {
+        .comment-stats { grid-template-columns: 1fr; }
+        .comment-content-wrap { max-width: 180px; }
+        .article-link-wrap { max-width: 120px; }
+        .approve-all-bar { flex-direction: column; align-items: stretch; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Comment Stats Header -->
+<div class="comment-stats">
+    <div class="comment-stat-card">
+        <div class="comment-stat-icon total">
+            <i class="fas fa-comments"></i>
+        </div>
+        <div>
+            <div class="comment-stat-value">{{ comments.paginator.count }}</div>
+            <div class="comment-stat-label">全部评论</div>
+        </div>
+    </div>
+    <div class="comment-stat-card">
+        <div class="comment-stat-icon pending">
+            <i class="fas fa-clock"></i>
+        </div>
+        <div>
+            <div class="comment-stat-value">{{ pending_count }}</div>
+            <div class="comment-stat-label">待审核</div>
+        </div>
+    </div>
+    <div class="comment-stat-card">
+        <div class="comment-stat-icon approved">
+            <i class="fas fa-check-circle"></i>
+        </div>
+        <div>
+            <div class="comment-stat-value" id="approvedCount">-</div>
+            <div class="comment-stat-label">已通过</div>
+        </div>
+    </div>
+</div>
+
+<div class="data-card" style="margin-top:.75rem;">
+    <!-- Filter Bar -->
+    <div class="filter-bar">
+        <div class="filter-tabs">
+            <a href="{% url 'dashboard:comments' %}" class="filter-tab {% if not current_status %}active{% endif %}">
+                全部
+            </a>
+            <a href="?status=pending" class="filter-tab {% if current_status == 'pending' %}active{% endif %}">
+                待审核 {% if pending_count %}<span style="background:#ef4444;color:#fff;font-size:.6rem;padding:0 5px;border-radius:8px;margin-left:4px;">{{ pending_count }}</span>{% endif %}
+            </a>
+            <a href="?status=approved" class="filter-tab {% if current_status == 'approved' %}active{% endif %}">已通过</a>
+        </div>
+
+        <div class="search-input-wrap">
+            <i class="fas fa-search"></i>
+            <form method="get" style="display:inline;">
+                {% if current_status %}<input type="hidden" name="status" value="{{ current_status }}">{% endif %}
+                <input type="text" name="q" placeholder="搜索评论..." value="{{ search_query|default:'' }}">
+            </form>
+        </div>
+    </div>
+
+    <!-- Bulk Approve All (only when pending comments exist) -->
+    {% if pending_count %}
+    <div class="approve-all-bar" id="approveAllBar">
+        <span class="info-text">
+            <i class="fas fa-exclamation-circle" style="color:#f59e0b;margin-right:.3rem;"></i>
+            当前有 <strong>{{ pending_count }}</strong> 条评论等待审核
+        </span>
+        <button class="btn-approve-all" onclick="confirmApproveAll()">
+            <i class="fas fa-check-double"></i> 一键审核全部
+        </button>
+    </div>
+    {% endif %}
+
+    <!-- Batch Actions -->
+    <div id="batchBar" style="display:none;padding:.6rem 1.25rem;background:rgba(99,102,241,.04);border-bottom:1px solid var(--border);gap:.5rem;align-items:center;">
+        <span style="font-size:.8rem;color:var(--text-2);margin-right:.5rem;" id="selectedCount">已选 0 项</span>
+        <button class="btn-primary-custom" style="font-size:.75rem;padding:.35rem .85rem;" onclick="batchAction('approve')"><i class="fas fa-check"></i> 通过</button>
+        <button class="btn-ghost-custom" style="font-size:.75rem;padding:.35rem .85rem;" onclick="batchAction('reject')"><i class="fas fa-ban"></i> 驳回</button>
+        <button class="btn-ghost-custom" style="font-size:.75rem;padding:.35rem .85rem;color:#ef4444;border-color:#fecaca;" onclick="confirmBatchDelete()"><i class="fas fa-trash"></i> 删除</button>
+    </div>
+
+    <!-- Table -->
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th style="width:36px;"><input type="checkbox" class="custom-check" id="checkAll" onchange="toggleAll(this)"></th>
+                <th>评论者</th>
+                <th>内容</th>
+                <th>文章</th>
+                <th>状态</th>
+                <th>时间</th>
+                <th style="width:120px;">操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for c in comments %}
+            <tr id="row-{{ c.id }}">
+                <td><input type="checkbox" class="custom-check row-check" value="{{ c.id }}" onchange="updateBatch()"></td>
+
+                <!-- Commenter Info (Enhanced) -->
+                <td>
+                    <div class="commenter-wrap">
+                        <div class="commenter-avatar {% if c.author %}registered{% else %}guest{% endif %}">
+                            {% if c.author %}{{ c.author.username|first|upper }}{% else %}{{ c.nickname|first|upper }}{% endif %}
+                        </div>
+                        <div>
+                            <div class="commenter-name">
+                                {% if c.author %}{{ c.author.username }}{% else %}{{ c.nickname }}{% endif %}
+                                {% if c.author %}
+                                <span class="commenter-badge registered">注册用户</span>
+                                {% else %}
+                                <span class="commenter-badge guest">访客</span>
+                                {% endif %}
+                            </div>
+                            <div class="commenter-meta">
+                                {% if c.email %}{{ c.email }}{% endif %}
+                                {% if c.ip_address %}
+                                <span class="ip-label">IP: {{ c.ip_address }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </td>
+
+                <!-- Comment Content (Expandable) -->
+                <td>
+                    <div class="comment-content-wrap">
+                        <div class="comment-text-short" onclick="toggleComment({{ c.id }})" title="点击展开">
+                            {{ c.content|truncatechars:50 }}
+                        </div>
+                        {% if c.content|length > 50 %}
+                        <span class="comment-expand-hint" id="hint-{{ c.id }}" onclick="toggleComment({{ c.id }})">
+                            展开全文 <i class="fas fa-chevron-down"></i>
+                        </span>
+                        {% endif %}
+                        <div class="comment-text-full" id="full-{{ c.id }}">{{ c.content }}</div>
+                    </div>
+                </td>
+
+                <!-- Article Link (Enhanced) -->
+                <td>
+                    <div class="article-link-wrap" data-tooltip="{{ c.article.title }}">
+                        <a href="{% url 'blog:article_detail' c.article.slug %}" target="_blank" class="article-link">
+                            {{ c.article.title }}
+                        </a>
+                        <i class="fas fa-external-link-alt article-link-icon"></i>
+                    </div>
+                </td>
+
+                <!-- Status (Animated) -->
+                <td>
+                    <div class="status-badge-wrap" id="status-{{ c.id }}">
+                        {% if c.is_approved %}
+                        <span class="badge-status approved"><span class="badge-dot green"></span>已通过</span>
+                        {% else %}
+                        <span class="badge-status pending"><span class="badge-dot red"></span>待审核</span>
+                        {% endif %}
+                    </div>
+                </td>
+
+                <!-- Time (Relative + Absolute) -->
+                <td>
+                    <div class="time-display">
+                        <span class="time-absolute">{{ c.created_at|date:"m-d H:i" }}</span>
+                        <span class="time-relative" data-time="{{ c.created_at|date:'c' }}"></span>
+                    </div>
+                </td>
+
+                <!-- Actions (with Reply) -->
+                <td>
+                    <div class="action-btns-row">
+                        <button class="btn-sm-action success" title="切换审核状态" onclick="quickAction({{ c.id }},'toggle_approve')">
+                            <i class="fas fa-{% if c.is_approved %}pause{% else %}check{% endif %}"></i>
+                        </button>
+                        <button class="btn-sm-action" title="回复" onclick="toggleReply({{ c.id }})" style="color:var(--primary);">
+                            <i class="fas fa-reply"></i>
+                        </button>
+                        <button class="btn-sm-action danger" title="删除" onclick="confirmDelete({{ c.id }})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+
+            <!-- Inline Reply Form -->
+            <tr id="reply-row-{{ c.id }}" style="background:transparent;">
+                <td colspan="7" style="padding:0;border-bottom:1px solid var(--border);">
+                    <div class="reply-form-wrap" id="reply-{{ c.id }}">
+                        <div class="reply-form-inner">
+                            <textarea class="reply-input" id="reply-input-{{ c.id }}" placeholder="回复 {% if c.author %}{{ c.author.username }}{% else %}{{ c.nickname }}{% endif %} 的评论..." rows="1"></textarea>
+                            <button class="reply-send-btn" onclick="sendReply({{ c.id }})">
+                                <i class="fas fa-paper-plane"></i> 发送
+                            </button>
+                            <button class="reply-cancel-btn" onclick="toggleReply({{ c.id }})">
+                                取消
+                            </button>
+                        </div>
+                    </div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="7">
+                    <div class="empty-state-enhanced">
+                        <div class="empty-state-icon">
+                            {% if current_status == 'pending' %}
+                            <i class="fas fa-check-double"></i>
+                            {% elif current_status == 'approved' %}
+                            <i class="fas fa-comments"></i>
+                            {% else %}
+                            <i class="fas fa-comment-slash"></i>
+                            {% endif %}
+                        </div>
+                        <div class="empty-state-title">
+                            {% if current_status == 'pending' %}
+                            没有待审核的评论
+                            {% elif current_status == 'approved' %}
+                            暂无已通过的评论
+                            {% elif search_query %}
+                            未找到匹配的评论
+                            {% else %}
+                            还没有收到任何评论
+                            {% endif %}
+                        </div>
+                        <div class="empty-state-desc">
+                            {% if current_status == 'pending' %}
+                            所有评论都已审核完毕，做得好！
+                            {% elif current_status == 'approved' %}
+                            当有评论通过审核后会在这里显示
+                            {% elif search_query %}
+                            尝试换个关键词搜索，或 <a href="{% url 'dashboard:comments' %}" style="color:var(--primary);">查看全部评论</a>
+                            {% else %}
+                            当读者在文章下留言后，评论将出现在这里
+                            {% endif %}
+                        </div>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Pagination -->
+    {% if comments.has_other_pages %}
+    <div class="pagination-bar">
+        <span>共 {{ comments.paginator.count }} 条评论，第 {{ comments.number }}/{{ comments.paginator.num_pages }} 页</span>
+        <div class="page-btns">
+            {% if comments.has_previous %}
+            <a href="?page={{ comments.previous_page_number }}{% if current_status %}&status={{ current_status }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}" class="page-btn"><i class="fas fa-chevron-left"></i></a>
+            {% endif %}
+            {% for num in comments.paginator.page_range %}
+            {% if num > comments.number|add:"-4" and num < comments.number|add:"4" %}
+            <a href="?page={{ num }}{% if current_status %}&status={{ current_status }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}" class="page-btn {% if comments.number == num %}active{% endif %}">{{ num }}</a>
+            {% endif %}
+            {% endfor %}
+            {% if comments.has_next %}
+            <a href="?page={{ comments.next_page_number }}{% if current_status %}&status={{ current_status }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}" class="page-btn"><i class="fas fa-chevron-right"></i></a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal-overlay" id="deleteModal">
+    <div class="modal-box" style="max-width:400px;">
+        <div class="modal-header">
+            <span class="modal-title">确认删除</span>
+            <button class="modal-close" onclick="closeModal('deleteModal')"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <div class="delete-modal-icon">
+                <i class="fas fa-trash-alt"></i>
+            </div>
+            <div class="delete-modal-text" id="deleteModalText">
+                确定要删除这条评论吗？<br>
+                <span style="font-size:.78rem;color:var(--text-3);">此操作不可撤销</span>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-ghost-custom" onclick="closeModal('deleteModal')">取消</button>
+            <button class="btn-danger-custom" id="deleteConfirmBtn" onclick="executeDelete()">
+                <i class="fas fa-trash"></i> 确认删除
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Approve All Confirmation Modal -->
+<div class="modal-overlay" id="approveAllModal">
+    <div class="modal-box" style="max-width:400px;">
+        <div class="modal-header">
+            <span class="modal-title">一键审核</span>
+            <button class="modal-close" onclick="closeModal('approveAllModal')"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <div style="width:56px;height:56px;border-radius:50%;background:rgba(16,185,129,.1);display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;font-size:1.4rem;color:var(--success);">
+                <i class="fas fa-check-double"></i>
+            </div>
+            <div class="delete-modal-text">
+                确定要通过全部 <strong>{{ pending_count }}</strong> 条待审核评论吗？
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-ghost-custom" onclick="closeModal('approveAllModal')">取消</button>
+            <button class="btn-primary-custom" onclick="executeApproveAll()">
+                <i class="fas fa-check-double"></i> 全部通过
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// ===== State =====
+let pendingDeleteId = null;
+let pendingDeleteMode = 'single'; // 'single' or 'batch'
+
+// ===== Checkbox & Batch =====
+function toggleAll(el) {
+    document.querySelectorAll('.row-check').forEach(c => c.checked = el.checked);
+    updateBatch();
+}
+
+function updateBatch() {
+    const checked = document.querySelectorAll('.row-check:checked');
+    document.getElementById('selectedCount').textContent = '已选 ' + checked.length + ' 项';
+    document.getElementById('batchBar').style.display = checked.length > 0 ? 'flex' : 'none';
+}
+
+// ===== Batch Actions =====
+async function batchAction(action) {
+    const ids = [...document.querySelectorAll('.row-check:checked')].map(c => c.value);
+    if (!ids.length) return;
+    if (action === 'delete') {
+        confirmBatchDelete();
+        return;
+    }
+    const res = await postAction('{% url "dashboard:comment_action" %}', { action, ids });
+    if (res.message) { showToast(res.message); setTimeout(() => location.reload(), 800); }
+    else if (res.error) showToast(res.error, 'error');
+}
+
+// ===== Delete Confirmation =====
+function confirmDelete(id) {
+    pendingDeleteId = id;
+    pendingDeleteMode = 'single';
+    document.getElementById('deleteModalText').innerHTML =
+        '确定要删除这条评论吗？<br><span style="font-size:.78rem;color:var(--text-3);">此操作不可撤销</span>';
+    openModal('deleteModal');
+}
+
+function confirmBatchDelete() {
+    const ids = [...document.querySelectorAll('.row-check:checked')].map(c => c.value);
+    if (!ids.length) return;
+    pendingDeleteId = ids;
+    pendingDeleteMode = 'batch';
+    document.getElementById('deleteModalText').innerHTML =
+        `确定要删除选中的 <strong>${ids.length}</strong> 条评论吗？<br><span style="font-size:.78rem;color:var(--text-3);">此操作不可撤销</span>`;
+    openModal('deleteModal');
+}
+
+async function executeDelete() {
+    closeModal('deleteModal');
+    if (pendingDeleteMode === 'single' && pendingDeleteId) {
+        const row = document.getElementById('row-' + pendingDeleteId);
+        const replyRow = document.getElementById('reply-row-' + pendingDeleteId);
+        if (row) {
+            row.classList.add('removing');
+            if (replyRow) replyRow.classList.add('removing');
+        }
+        const res = await postAction(`/dashboard/comments/${pendingDeleteId}/action/`, { action: 'delete' });
+        setTimeout(() => {
+            if (row) row.remove();
+            if (replyRow) replyRow.remove();
+        }, 350);
+        showToast('评论已删除');
+    } else if (pendingDeleteMode === 'batch' && pendingDeleteId) {
+        const res = await postAction('{% url "dashboard:comment_action" %}', { action: 'delete', ids: pendingDeleteId });
+        if (res.message) { showToast(res.message); setTimeout(() => location.reload(), 800); }
+        else if (res.error) showToast(res.error, 'error');
+    }
+    pendingDeleteId = null;
+}
+
+// ===== Quick Action with Status Animation =====
+async function quickAction(id, action) {
+    if (action === 'delete') {
+        confirmDelete(id);
+        return;
+    }
+    // Animate status badge
+    const statusWrap = document.getElementById('status-' + id);
+    if (statusWrap) {
+        statusWrap.classList.add('animating');
+        setTimeout(() => statusWrap.classList.remove('animating'), 450);
+    }
+    const res = await postAction(`/dashboard/comments/${id}/action/`, { action });
+    if (action === 'toggle_approve') {
+        // Toggle the status badge in-place
+        const badge = statusWrap?.querySelector('.badge-status');
+        if (badge) {
+            const isCurrentlyApproved = badge.classList.contains('approved');
+            if (isCurrentlyApproved) {
+                badge.className = 'badge-status pending';
+                badge.innerHTML = '<span class="badge-dot red"></span>待审核';
+            } else {
+                badge.className = 'badge-status approved';
+                badge.innerHTML = '<span class="badge-dot green"></span>已通过';
+            }
+            // Toggle the action button icon
+            const row = document.getElementById('row-' + id);
+            const toggleBtn = row?.querySelector('.btn-sm-action.success i');
+            if (toggleBtn) {
+                toggleBtn.className = isCurrentlyApproved ? 'fas fa-check' : 'fas fa-pause';
+            }
+        }
+        showToast('状态已更新');
+    } else {
+        showToast('操作成功');
+        setTimeout(() => location.reload(), 600);
+    }
+}
+
+// ===== Comment Expand/Collapse =====
+function toggleComment(id) {
+    const full = document.getElementById('full-' + id);
+    const hint = document.getElementById('hint-' + id);
+    if (!full) return;
+    const isExpanded = full.classList.contains('expanded');
+    full.classList.toggle('expanded');
+    if (hint) {
+        if (isExpanded) {
+            hint.innerHTML = '展开全文 <i class="fas fa-chevron-down"></i>';
+            hint.classList.remove('active');
+        } else {
+            hint.innerHTML = '收起 <i class="fas fa-chevron-down"></i>';
+            hint.classList.add('active');
+        }
+    }
+}
+
+// ===== Quick Reply =====
+function toggleReply(id) {
+    const wrap = document.getElementById('reply-' + id);
+    if (!wrap) return;
+    const isOpen = wrap.classList.contains('open');
+    // Close all other reply forms first
+    document.querySelectorAll('.reply-form-wrap.open').forEach(el => el.classList.remove('open'));
+    if (!isOpen) {
+        wrap.classList.add('open');
+        setTimeout(() => {
+            const input = document.getElementById('reply-input-' + id);
+            if (input) input.focus();
+        }, 100);
+    }
+}
+
+function sendReply(id) {
+    const input = document.getElementById('reply-input-' + id);
+    const text = input ? input.value.trim() : '';
+    if (!text) {
+        showToast('请输入回复内容', 'warning');
+        return;
+    }
+    // Visual feedback (frontend-only)
+    showToast('回复功能开发中', 'info');
+    toggleReply(id);
+    if (input) input.value = '';
+}
+
+// ===== Approve All =====
+function confirmApproveAll() {
+    openModal('approveAllModal');
+}
+
+async function executeApproveAll() {
+    closeModal('approveAllModal');
+    const res = await postAction('{% url "dashboard:comment_action" %}', { action: 'approve_all' });
+    if (res.message) {
+        showToast(res.message);
+        setTimeout(() => location.reload(), 800);
+    } else if (res.error) {
+        showToast(res.error, 'error');
+    } else {
+        showToast('已通过全部待审核评论');
+        setTimeout(() => location.reload(), 800);
+    }
+}
+
+// ===== Relative Time =====
+function getRelativeTime(dateStr) {
+    const now = new Date();
+    const date = new Date(dateStr);
+    const diff = Math.floor((now - date) / 1000);
+
+    if (diff < 0) return '刚刚';
+    if (diff < 60) return '刚刚';
+    if (diff < 3600) return Math.floor(diff / 60) + '分钟前';
+    if (diff < 86400) return Math.floor(diff / 3600) + '小时前';
+    if (diff < 172800) return '昨天';
+    if (diff < 604800) return Math.floor(diff / 86400) + '天前';
+    if (diff < 2592000) return Math.floor(diff / 604800) + '周前';
+    if (diff < 31536000) return Math.floor(diff / 2592000) + '个月前';
+    return Math.floor(diff / 31536000) + '年前';
+}
+
+function updateRelativeTimes() {
+    document.querySelectorAll('.time-relative[data-time]').forEach(el => {
+        const timeStr = el.getAttribute('data-time');
+        if (timeStr) {
+            el.textContent = getRelativeTime(timeStr);
+        }
+    });
+}
+
+// ===== Approved Count =====
+function updateApprovedCount() {
+    const total = {{ comments.paginator.count }};
+    const pending = {{ pending_count }};
+    const approved = total - pending;
+    const el = document.getElementById('approvedCount');
+    if (el) el.textContent = approved >= 0 ? approved : '-';
+}
+
+// ===== Init =====
+document.addEventListener('DOMContentLoaded', function() {
+    updateRelativeTimes();
+    updateApprovedCount();
+    // Update relative times every minute
+    setInterval(updateRelativeTimes, 60000);
+});
+</script>
+{% endblock %}

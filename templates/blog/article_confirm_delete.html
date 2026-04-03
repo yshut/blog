@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+
+{% block title %}删除文章 - NewsFlow{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card slide-up" style="max-width: 480px;">
+        <div class="text-center">
+            <div class="delete-icon-wrapper mb-3">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <h3 style="font-weight: 700; color: var(--text-primary); margin-bottom: 0.75rem;">确认删除</h3>
+            <p style="color: var(--text-muted); margin-bottom: 0.5rem;">
+                确定要删除文章
+            </p>
+            <p style="font-weight: 600; color: var(--text-primary); margin-bottom: 1.5rem; font-size: 1.1rem;">
+                {{ article.title }}
+            </p>
+            <div class="alert alert-danger" style="font-size: 0.85rem; text-align: left;">
+                <i class="fas fa-info-circle"></i> 此操作不可撤销，文章及其所有评论将被永久删除。
+            </div>
+
+            <form method="post">
+                {% csrf_token %}
+                <div class="d-flex gap-3 justify-content-center mt-4">
+                    <button type="submit" class="btn btn-danger btn-lg">
+                        <i class="fas fa-trash"></i> 确认删除
+                    </button>
+                    <a href="{% url 'blog:article_detail' article.slug %}" class="btn btn-ghost btn-lg">
+                        <i class="fas fa-times"></i> 取消
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .auth-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 50vh;
+        padding: 2rem 0;
+    }
+
+    .auth-card {
+        width: 100%;
+        background: var(--bg-card);
+        border-radius: var(--radius-xl);
+        padding: 2.5rem;
+        border: 1px solid var(--border-color);
+        box-shadow: var(--shadow-lg);
+    }
+
+    .delete-icon-wrapper {
+        width: 72px;
+        height: 72px;
+        border-radius: 50%;
+        background: rgba(244, 63, 94, 0.1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto;
+    }
+
+    .delete-icon-wrapper i {
+        font-size: 2rem;
+        color: var(--accent);
+    }
+
+    .btn-lg {
+        padding: 0.75rem 2rem;
+        font-size: 0.95rem;
+    }
+</style>
+{% endblock %}

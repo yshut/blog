@@ -5,7 +5,7 @@ from django.contrib import messages
 from django.core.paginator import Paginator
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
-from django.db.models import Q, F
+from django.db.models import Q, F, Sum, Count
 from django.views.decorators.cache import cache_page
 from django.core.cache import cache
 import json
@@ -45,15 +45,19 @@ def index(request):
     page = request.GET.get('page', 1)
     articles = paginator.get_page(page)
 
-    # 使用缓存减少分类和标签查询
+    # 使用缓存减少分类和标签查询，并预计算文章数量避免 N+1
     categories = cache.get('all_categories')
     if categories is None:
-        categories = Category.objects.all()
+        categories = Category.objects.annotate(
+            article_count=Count('articles', filter=Q(articles__status='published'))
+        )
         cache.set('all_categories', categories, 300)  # 缓存5分钟
 
     tags = cache.get('all_tags')
     if tags is None:
-        tags = Tag.objects.all()
+        tags = Tag.objects.annotate(
+            article_count=Count('articles', filter=Q(articles__status='published'))
+        )
         cache.set('all_tags', tags, 300)  # 缓存5分钟
 
     context = {
@@ -95,7 +99,9 @@ def article_detail(request, slug):
 def category_view(request, slug):
     """分类页面"""
     category = get_object_or_404(Category, slug=slug)
-    articles = Article.objects.filter(category=category, status='published')
+    articles = Article.objects.filter(
+        category=category, status='published'
+    ).select_related('author')
 
     paginator = Paginator(articles, 10)
     page = request.GET.get('page', 1)
@@ -111,7 +117,9 @@ def category_view(request, slug):
 def tag_view(request, slug):
     """标签页面"""
     tag = get_object_or_404(Tag, slug=slug)
-    articles = Article.objects.filter(tags=tag, status='published')
+    articles = Article.objects.filter(
+        tags=tag, status='published'
+    ).select_related('category', 'author')
 
     paginator = Paginator(articles, 10)
     page = request.GET.get('page', 1)
@@ -249,8 +257,12 @@ def user_login(request):
             if user is not None:
                 login(request, user)
                 messages.success(request, f'欢迎回来，{user.username}！')
-                next_url = request.GET.get('next', 'blog:index')
-                return redirect(next_url)
+                next_url = request.GET.get('next', '')
+                # 安全校验：只允许站内相对路径重定向，防止开放重定向攻击
+                from django.utils.http import url_has_allowed_host_and_scheme
+                if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
+                    return redirect(next_url)
+                return redirect('blog:index')
             else:
                 messages.error(request, '用户名或密码错误！')
     else:
@@ -259,6 +271,7 @@ def user_login(request):
     return render(request, 'blog/login.html', {'form': form})
 
 
+@require_POST
 def user_logout(request):
     """用户登出"""
     logout(request)
@@ -269,11 +282,13 @@ def user_logout(request):
 @login_required
 def user_profile(request):
     """用户个人中心"""
-    user_articles = Article.objects.filter(author=request.user)
-    user_comments = Comment.objects.filter(author=request.user)
+    user_articles = Article.objects.filter(author=request.user).select_related('category')
+    user_comments = Comment.objects.filter(author=request.user).select_related('article')
+    total_views = user_articles.aggregate(total=Sum('views'))['total'] or 0
 
     context = {
         'user_articles': user_articles,
         'user_comments': user_comments,
+        'total_views': total_views,
     }
     return render(request, 'blog/profile.html', context)

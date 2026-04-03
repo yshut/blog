@@ -1,0 +1,935 @@
+{% extends 'admin_custom/base.html' %}
+
+{% block page_title %}仪表盘{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ===== Welcome Banner ===== */
+    .welcome-banner {
+        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a78bfa 100%);
+        border-radius: var(--radius);
+        padding: 1.75rem 2rem;
+        margin-bottom: 1.5rem;
+        color: #fff;
+        position: relative;
+        overflow: hidden;
+    }
+    .welcome-banner::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -20%;
+        width: 400px;
+        height: 400px;
+        background: radial-gradient(circle, rgba(255,255,255,.12) 0%, transparent 70%);
+        border-radius: 50%;
+    }
+    .welcome-banner::after {
+        content: '';
+        position: absolute;
+        bottom: -30%;
+        left: 30%;
+        width: 200px;
+        height: 200px;
+        background: radial-gradient(circle, rgba(255,255,255,.08) 0%, transparent 70%);
+        border-radius: 50%;
+    }
+    .welcome-banner h2 {
+        font-size: 1.35rem;
+        font-weight: 700;
+        margin-bottom: .35rem;
+        position: relative;
+        z-index: 1;
+    }
+    .welcome-banner p {
+        font-size: .85rem;
+        opacity: .85;
+        margin: 0;
+        position: relative;
+        z-index: 1;
+    }
+    .welcome-banner .welcome-time {
+        font-size: .75rem;
+        opacity: .65;
+        margin-top: .5rem;
+        position: relative;
+        z-index: 1;
+    }
+
+    /* ===== Animated Stat Counters ===== */
+    .stat-value[data-target] {
+        display: inline-block;
+    }
+    .stat-card {
+        animation: cardFadeIn .5s ease both;
+    }
+    .stat-card:nth-child(1) { animation-delay: .05s; }
+    .stat-card:nth-child(2) { animation-delay: .1s; }
+    .stat-card:nth-child(3) { animation-delay: .15s; }
+    .stat-card:nth-child(4) { animation-delay: .2s; }
+    .stat-card:nth-child(5) { animation-delay: .25s; }
+    .stat-card:nth-child(6) { animation-delay: .3s; }
+    @keyframes cardFadeIn {
+        from { opacity: 0; transform: translateY(12px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ===== Quick Actions ===== */
+    .quick-actions {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: .75rem;
+        margin-bottom: 1.5rem;
+    }
+    .quick-action-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: .6rem;
+        padding: .85rem 1rem;
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        color: var(--text);
+        text-decoration: none;
+        font-size: .85rem;
+        font-weight: 600;
+        transition: var(--transition);
+        position: relative;
+        overflow: hidden;
+    }
+    .quick-action-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+        color: #fff;
+        border-color: transparent;
+    }
+    .quick-action-btn:nth-child(1):hover { background: #6366f1; }
+    .quick-action-btn:nth-child(2):hover { background: #f43f5e; }
+    .quick-action-btn:nth-child(3):hover { background: #10b981; }
+    .quick-action-btn:nth-child(4):hover { background: #f59e0b; }
+    .quick-action-btn i {
+        font-size: .9rem;
+        width: 20px;
+        text-align: center;
+    }
+
+    /* ===== Chart Enhanced ===== */
+    .chart-container {
+        padding: 1.25rem 1.25rem .75rem;
+    }
+    .chart-area {
+        display: flex;
+        align-items: flex-end;
+        gap: 8px;
+        height: 140px;
+        justify-content: space-between;
+        padding-bottom: .25rem;
+    }
+    .chart-col {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        flex: 1;
+        position: relative;
+    }
+    .chart-bar-wrap {
+        width: 100%;
+        max-width: 48px;
+        position: relative;
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+        height: 100%;
+    }
+    .chart-bar {
+        width: 100%;
+        border-radius: 6px 6px 2px 2px;
+        background: linear-gradient(180deg, #6366f1 0%, #818cf8 60%, #c7d2fe 100%);
+        min-height: 6px;
+        position: relative;
+        cursor: pointer;
+        transition: transform .15s ease, box-shadow .15s ease;
+        animation: barGrow .8s ease both;
+        transform-origin: bottom;
+    }
+    .chart-bar:hover {
+        transform: scaleY(1.03);
+        transform-origin: bottom;
+        box-shadow: 0 -4px 16px rgba(99,102,241,.3);
+    }
+    @keyframes barGrow {
+        from { transform: scaleY(0); opacity: 0.3; }
+        to { transform: scaleY(1); opacity: 1; }
+    }
+    .chart-col:nth-child(1) .chart-bar { animation-delay: .05s; }
+    .chart-col:nth-child(2) .chart-bar { animation-delay: .1s; }
+    .chart-col:nth-child(3) .chart-bar { animation-delay: .15s; }
+    .chart-col:nth-child(4) .chart-bar { animation-delay: .2s; }
+    .chart-col:nth-child(5) .chart-bar { animation-delay: .25s; }
+    .chart-col:nth-child(6) .chart-bar { animation-delay: .3s; }
+    .chart-col:nth-child(7) .chart-bar { animation-delay: .35s; }
+    .chart-label {
+        font-size: .68rem;
+        color: var(--text-3);
+        font-weight: 500;
+    }
+    .chart-tooltip {
+        position: absolute;
+        top: -36px;
+        left: 50%;
+        transform: translateX(-50%) scale(0.8);
+        background: var(--text);
+        color: #fff;
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: .7rem;
+        font-weight: 600;
+        white-space: nowrap;
+        opacity: 0;
+        pointer-events: none;
+        transition: all .15s ease;
+        z-index: 10;
+    }
+    .chart-tooltip::after {
+        content: '';
+        position: absolute;
+        bottom: -4px;
+        left: 50%;
+        transform: translateX(-50%);
+        border-left: 5px solid transparent;
+        border-right: 5px solid transparent;
+        border-top: 5px solid var(--text);
+    }
+    .chart-bar-wrap:hover .chart-tooltip {
+        opacity: 1;
+        transform: translateX(-50%) scale(1);
+    }
+    .chart-summary {
+        display: flex;
+        align-items: center;
+        gap: 1.25rem;
+        padding: .75rem 0 0;
+        border-top: 1px solid var(--border);
+        margin-top: .5rem;
+    }
+    .chart-summary-item {
+        font-size: .75rem;
+        color: var(--text-3);
+        display: flex;
+        align-items: center;
+        gap: .35rem;
+    }
+    .chart-summary-item strong {
+        color: var(--text);
+        font-weight: 700;
+        font-size: .85rem;
+    }
+
+    /* ===== Popular Articles Enhanced ===== */
+    .popular-item {
+        display: flex;
+        align-items: center;
+        gap: .75rem;
+        padding: .7rem 1.25rem;
+        border-bottom: 1px solid var(--border);
+        transition: var(--transition);
+    }
+    .popular-item:last-child { border-bottom: none; }
+    .popular-item:hover { background: rgba(99,102,241,.03); }
+    .rank-medal {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: .75rem;
+        font-weight: 800;
+        flex-shrink: 0;
+    }
+    .rank-medal.gold {
+        background: linear-gradient(135deg, #fbbf24, #f59e0b);
+        color: #fff;
+        box-shadow: 0 2px 8px rgba(245,158,11,.35);
+    }
+    .rank-medal.silver {
+        background: linear-gradient(135deg, #cbd5e1, #94a3b8);
+        color: #fff;
+        box-shadow: 0 2px 8px rgba(148,163,184,.3);
+    }
+    .rank-medal.bronze {
+        background: linear-gradient(135deg, #fdba74, #f97316);
+        color: #fff;
+        box-shadow: 0 2px 8px rgba(249,115,22,.3);
+    }
+    .rank-medal.normal {
+        background: #f1f5f9;
+        color: var(--text-3);
+        font-size: .7rem;
+    }
+    .popular-info { flex: 1; min-width: 0; }
+    .popular-title {
+        font-size: .8rem;
+        color: var(--text);
+        font-weight: 500;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        display: block;
+        margin-bottom: .35rem;
+    }
+    .popular-views-bar {
+        height: 4px;
+        background: var(--bg);
+        border-radius: 2px;
+        overflow: hidden;
+    }
+    .popular-views-fill {
+        height: 100%;
+        border-radius: 2px;
+        background: linear-gradient(90deg, #6366f1, #a78bfa);
+        transition: width .8s ease;
+    }
+    .popular-views-count {
+        font-size: .7rem;
+        color: var(--text-3);
+        white-space: nowrap;
+        font-weight: 600;
+        min-width: 60px;
+        text-align: right;
+    }
+
+    /* ===== Comment Enhanced ===== */
+    .comment-item {
+        padding: .75rem 1.25rem;
+        border-bottom: 1px solid var(--border);
+        transition: var(--transition);
+    }
+    .comment-item:last-child { border-bottom: none; }
+    .comment-item:hover { background: rgba(99,102,241,.02); }
+    .comment-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: .35rem;
+    }
+    .comment-author {
+        font-size: .8rem;
+        font-weight: 600;
+        color: var(--text);
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+    }
+    .comment-actions {
+        display: flex;
+        align-items: center;
+        gap: .35rem;
+    }
+    .comment-content {
+        font-size: .8rem;
+        color: var(--text-2);
+        margin: 0 0 .3rem;
+        line-height: 1.5;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        max-width: 100%;
+        transition: all .2s ease;
+        cursor: default;
+    }
+    .comment-item:hover .comment-content {
+        white-space: normal;
+        overflow: visible;
+    }
+    .comment-meta {
+        font-size: .7rem;
+        color: var(--text-3);
+        display: flex;
+        align-items: center;
+        gap: .35rem;
+    }
+    .approve-btn {
+        padding: 2px 10px;
+        border-radius: 12px;
+        border: 1px solid var(--success);
+        background: transparent;
+        color: var(--success);
+        font-size: .65rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: var(--transition);
+        white-space: nowrap;
+    }
+    .approve-btn:hover {
+        background: var(--success);
+        color: #fff;
+    }
+
+    /* ===== System Info Card ===== */
+    .system-info {
+        padding: 0;
+    }
+    .system-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: .65rem 1.25rem;
+        border-bottom: 1px solid var(--border);
+        font-size: .8rem;
+    }
+    .system-row:last-child { border-bottom: none; }
+    .system-label {
+        color: var(--text-3);
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+    }
+    .system-value {
+        color: var(--text);
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: .35rem;
+    }
+    .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        display: inline-block;
+        animation: statusPulse 2s ease infinite;
+    }
+    .status-dot.green {
+        background: #10b981;
+        box-shadow: 0 0 0 0 rgba(16,185,129,.4);
+    }
+    @keyframes statusPulse {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(16,185,129,.4); }
+        50% { box-shadow: 0 0 0 4px rgba(16,185,129,.1); }
+    }
+
+    /* ===== Activity Timeline ===== */
+    .timeline {
+        padding: .5rem 1.25rem 1rem;
+    }
+    .timeline-item {
+        display: flex;
+        gap: .75rem;
+        padding: .5rem 0;
+        position: relative;
+    }
+    .timeline-item:not(:last-child)::after {
+        content: '';
+        position: absolute;
+        left: 11px;
+        top: 28px;
+        bottom: -4px;
+        width: 2px;
+        background: var(--border);
+    }
+    .timeline-dot {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        font-size: .6rem;
+        z-index: 1;
+    }
+    .timeline-dot.blue { background: rgba(99,102,241,.12); color: #6366f1; }
+    .timeline-dot.green { background: rgba(16,185,129,.12); color: #10b981; }
+    .timeline-dot.amber { background: rgba(245,158,11,.12); color: #f59e0b; }
+    .timeline-dot.rose { background: rgba(244,63,94,.12); color: #f43f5e; }
+    .timeline-body { flex: 1; min-width: 0; }
+    .timeline-text {
+        font-size: .78rem;
+        color: var(--text-2);
+        line-height: 1.5;
+    }
+    .timeline-text strong {
+        color: var(--text);
+        font-weight: 600;
+    }
+    .timeline-time {
+        font-size: .68rem;
+        color: var(--text-3);
+        margin-top: 2px;
+    }
+
+    /* ===== Dashboard Grid Layouts ===== */
+    .dashboard-row {
+        display: grid;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    .dashboard-row.two-col {
+        grid-template-columns: 1fr 1fr;
+    }
+    .dashboard-row.main-side {
+        grid-template-columns: 2fr 1fr;
+    }
+
+    /* ===== Responsive ===== */
+    @media (max-width: 992px) {
+        .dashboard-row.two-col,
+        .dashboard-row.main-side {
+            grid-template-columns: 1fr;
+        }
+        .quick-actions {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+    @media (max-width: 576px) {
+        .quick-actions {
+            grid-template-columns: 1fr;
+        }
+        .welcome-banner {
+            padding: 1.25rem 1.25rem;
+        }
+        .welcome-banner h2 {
+            font-size: 1.1rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- ===== Welcome Banner ===== -->
+<div class="welcome-banner">
+    <h2>欢迎回来，{{ user.username }}</h2>
+    <p>您的博客当前共有 {{ total_articles }} 篇文章，累计获得 {{ total_views }} 次阅读{% if pending_comments > 0 %}，还有 {{ pending_comments }} 条评论等待审核{% endif %}。</p>
+    <div class="welcome-time" id="welcomeTime"></div>
+</div>
+
+<!-- ===== Stats Grid ===== -->
+<div class="card-grid" style="margin-bottom:1.5rem;">
+    <div class="stat-card">
+        <div class="stat-icon" style="background:rgba(99,102,241,.1);color:#6366f1;"><i class="fas fa-file-alt"></i></div>
+        <div>
+            <div class="stat-value" data-target="{{ total_articles }}">0</div>
+            <div class="stat-label">总文章数</div>
+            <div class="stat-change up"><i class="fas fa-arrow-up"></i> 本周 +{{ week_articles }}</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background:rgba(16,185,129,.1);color:#10b981;"><i class="fas fa-check-circle"></i></div>
+        <div>
+            <div class="stat-value" data-target="{{ published_articles }}">0</div>
+            <div class="stat-label">已发布</div>
+            <div class="stat-change" style="color:#94a3b8;">草稿 {{ draft_articles }}</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background:rgba(6,182,212,.1);color:#06b6d4;"><i class="fas fa-eye"></i></div>
+        <div>
+            <div class="stat-value" data-target="{{ total_views }}">0</div>
+            <div class="stat-label">总阅读量</div>
+            <div class="stat-change up"><i class="fas fa-arrow-up"></i> 本周 +{{ week_views }}</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background:rgba(244,63,94,.1);color:#f43f5e;"><i class="fas fa-comments"></i></div>
+        <div>
+            <div class="stat-value" data-target="{{ total_comments }}">0</div>
+            <div class="stat-label">总评论</div>
+            {% if pending_comments > 0 %}
+            <div class="stat-change down"><i class="fas fa-clock"></i> {{ pending_comments }} 待审核</div>
+            {% else %}
+            <div class="stat-change up">全部已审核</div>
+            {% endif %}
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background:rgba(139,92,246,.1);color:#8b5cf6;"><i class="fas fa-robot"></i></div>
+        <div>
+            <div class="stat-value" data-target="{{ ai_articles }}">0</div>
+            <div class="stat-label">AI生成文章</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background:rgba(245,158,11,.1);color:#f59e0b;"><i class="fas fa-layer-group"></i></div>
+        <div>
+            <div class="stat-value" data-target="{{ total_categories }}">0</div>
+            <div class="stat-label">分类</div>
+            <div class="stat-change" style="color:#94a3b8;">标签 {{ total_tags }}</div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== Quick Actions ===== -->
+<div class="quick-actions">
+    <a href="{% url 'blog:create_article' %}" class="quick-action-btn">
+        <i class="fas fa-plus-circle"></i> 新建文章
+    </a>
+    <a href="{% url 'dashboard:comments' %}?status=pending" class="quick-action-btn">
+        <i class="fas fa-clipboard-check"></i> 审核评论
+        {% if pending_comments > 0 %}
+        <span style="background:#f43f5e;color:#fff;font-size:.6rem;font-weight:700;padding:1px 7px;border-radius:10px;">{{ pending_comments }}</span>
+        {% endif %}
+    </a>
+    <a href="{% url 'dashboard:categories_tags' %}" class="quick-action-btn">
+        <i class="fas fa-folder-open"></i> 管理分类
+    </a>
+    <a href="{% url 'dashboard:apikeys' %}" class="quick-action-btn">
+        <i class="fas fa-key"></i> API密钥
+    </a>
+</div>
+
+<!-- ===== Chart + Popular Articles Row ===== -->
+<div class="dashboard-row two-col">
+    <!-- Chart: 7-day trend -->
+    <div class="data-card">
+        <div class="data-card-header">
+            <span class="data-card-title"><i class="fas fa-chart-bar" style="color:#6366f1;margin-right:.4rem;"></i> 近7日发布趋势</span>
+            <span style="font-size:.75rem;color:var(--text-3);">{{ week_articles }} 篇本周</span>
+        </div>
+        <div class="chart-container">
+            <div class="chart-area">
+                {% for d in daily_data %}
+                <div class="chart-col">
+                    <div class="chart-bar-wrap">
+                        <div class="chart-bar" style="height:{{ d.count|default:0 }}0%;min-height:6px;" data-count="{{ d.count }}"></div>
+                        <div class="chart-tooltip">{{ d.date }}：{{ d.count }} 篇</div>
+                    </div>
+                    <span class="chart-label">{{ d.date }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            <div class="chart-summary">
+                <div class="chart-summary-item">
+                    <i class="fas fa-calendar-week" style="color:#6366f1;"></i>
+                    本周发布 <strong>{{ week_articles }}</strong> 篇
+                </div>
+                <div class="chart-summary-item">
+                    <i class="fas fa-comment" style="color:#f59e0b;"></i>
+                    本周评论 <strong>{{ week_comments }}</strong> 条
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Popular Articles with medals -->
+    <div class="data-card">
+        <div class="data-card-header">
+            <span class="data-card-title"><i class="fas fa-fire" style="color:#f43f5e;margin-right:.4rem;"></i> 热门文章</span>
+        </div>
+        <div style="padding:0;">
+            {% for a in popular_articles %}
+            <div class="popular-item">
+                {% if forloop.counter == 1 %}
+                <span class="rank-medal gold"><i class="fas fa-crown"></i></span>
+                {% elif forloop.counter == 2 %}
+                <span class="rank-medal silver"><i class="fas fa-medal"></i></span>
+                {% elif forloop.counter == 3 %}
+                <span class="rank-medal bronze"><i class="fas fa-award"></i></span>
+                {% else %}
+                <span class="rank-medal normal">{{ forloop.counter }}</span>
+                {% endif %}
+                <div class="popular-info">
+                    <span class="popular-title">{{ a.title }}</span>
+                    <div class="popular-views-bar">
+                        <div class="popular-views-fill" data-width="{{ a.views }}" style="width:0%;"></div>
+                    </div>
+                </div>
+                <span class="popular-views-count"><i class="fas fa-eye"></i> {{ a.views }}</span>
+            </div>
+            {% empty %}
+            <div class="empty-state" style="padding:2rem;">
+                <i class="fas fa-chart-line"></i>
+                <p>暂无数据</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- ===== Recent Articles + Right Sidebar ===== -->
+<div class="dashboard-row main-side">
+    <!-- Recent Articles -->
+    <div class="data-card">
+        <div class="data-card-header">
+            <span class="data-card-title"><i class="fas fa-clock" style="color:#06b6d4;margin-right:.4rem;"></i> 最近文章</span>
+            <a href="{% url 'dashboard:articles' %}" class="btn-ghost-custom" style="font-size:.75rem;padding:.3rem .75rem;">查看全部</a>
+        </div>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>标题</th>
+                    <th>作者</th>
+                    <th>分类</th>
+                    <th>状态</th>
+                    <th>时间</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for a in recent_articles %}
+                <tr>
+                    <td>
+                        <div style="display:flex;align-items:center;gap:.4rem;">
+                            <span style="font-weight:500;color:var(--text);max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;">{{ a.title }}</span>
+                            {% if a.is_ai_generated %}<span class="badge-status ai" style="font-size:.6rem;padding:1px 6px;">AI</span>{% endif %}
+                            {% if a.is_top %}<span class="badge-status top" style="font-size:.6rem;padding:1px 6px;">顶</span>{% endif %}
+                        </div>
+                    </td>
+                    <td style="font-size:.8rem;">{{ a.author.username }}</td>
+                    <td style="font-size:.78rem;color:var(--text-3);">{% if a.category %}{{ a.category }}{% else %}<span style="opacity:.4;">-</span>{% endif %}</td>
+                    <td>
+                        {% if a.status == 'published' %}
+                        <span class="badge-status published"><span class="badge-dot green"></span>已发布</span>
+                        {% else %}
+                        <span class="badge-status draft"><span class="badge-dot yellow"></span>草稿</span>
+                        {% endif %}
+                    </td>
+                    <td style="font-size:.8rem;color:var(--text-3);white-space:nowrap;">{{ a.created_at|date:"m-d H:i" }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5">
+                        <div class="empty-state" style="padding:2rem;">
+                            <i class="fas fa-file-alt"></i>
+                            <p>暂无文章</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Right Column: Comments + System + Timeline stacked -->
+    <div style="display:flex;flex-direction:column;gap:1rem;">
+        <!-- Recent Comments -->
+        <div class="data-card">
+            <div class="data-card-header">
+                <span class="data-card-title"><i class="fas fa-comment-dots" style="color:#f59e0b;margin-right:.4rem;"></i> 最近评论</span>
+                <a href="{% url 'dashboard:comments' %}" class="btn-ghost-custom" style="font-size:.75rem;padding:.3rem .75rem;">查看全部</a>
+            </div>
+            <div style="padding:0;">
+                {% for c in recent_comments %}
+                <div class="comment-item">
+                    <div class="comment-header">
+                        <span class="comment-author">
+                            <span style="width:22px;height:22px;border-radius:50%;background:{% cycle 'rgba(99,102,241,.12)' 'rgba(16,185,129,.12)' 'rgba(245,158,11,.12)' 'rgba(244,63,94,.12)' %};display:inline-flex;align-items:center;justify-content:center;font-size:.6rem;color:{% cycle '#6366f1' '#10b981' '#f59e0b' '#f43f5e' %};">
+                                <i class="fas fa-user"></i>
+                            </span>
+                            {% if c.author %}{{ c.author.username }}{% else %}{{ c.nickname }}{% endif %}
+                        </span>
+                        <div class="comment-actions">
+                            {% if c.is_approved %}
+                            <span class="badge-status approved" style="font-size:.6rem;padding:1px 6px;"><span class="badge-dot green"></span>通过</span>
+                            {% else %}
+                            <button class="approve-btn" onclick="approveComment({{ c.id }})" title="批准评论">
+                                <i class="fas fa-check"></i> 批准
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <p class="comment-content">{{ c.content }}</p>
+                    <div class="comment-meta">
+                        <i class="fas fa-clock"></i> {{ c.created_at|date:"m-d H:i" }}
+                        <span>&middot;</span>
+                        <i class="fas fa-link"></i> {{ c.article.title|truncatechars:18 }}
+                    </div>
+                </div>
+                {% empty %}
+                <div class="empty-state" style="padding:2rem;">
+                    <i class="fas fa-comment-slash"></i>
+                    <p>暂无评论</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- System Info -->
+        <div class="data-card">
+            <div class="data-card-header">
+                <span class="data-card-title"><i class="fas fa-server" style="color:#06b6d4;margin-right:.4rem;"></i> 系统信息</span>
+            </div>
+            <div class="system-info">
+                <div class="system-row">
+                    <span class="system-label"><i class="fas fa-heartbeat" style="color:#10b981;"></i> 运行状态</span>
+                    <span class="system-value"><span class="status-dot green"></span> 正常</span>
+                </div>
+                <div class="system-row">
+                    <span class="system-label"><i class="fab fa-python" style="color:#3776ab;"></i> 框架版本</span>
+                    <span class="system-value">Django 5.x</span>
+                </div>
+                <div class="system-row">
+                    <span class="system-label"><i class="fas fa-database" style="color:#f59e0b;"></i> 数据库</span>
+                    <span class="system-value">SQLite</span>
+                </div>
+                <div class="system-row">
+                    <span class="system-label"><i class="fas fa-sync-alt" style="color:#8b5cf6;"></i> 最后更新</span>
+                    <span class="system-value" id="systemTime">--</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Activity Timeline -->
+        <div class="data-card">
+            <div class="data-card-header">
+                <span class="data-card-title"><i class="fas fa-stream" style="color:#8b5cf6;margin-right:.4rem;"></i> 今日动态</span>
+            </div>
+            <div class="timeline">
+                {% if week_articles > 0 %}
+                <div class="timeline-item">
+                    <div class="timeline-dot blue"><i class="fas fa-pen"></i></div>
+                    <div class="timeline-body">
+                        <div class="timeline-text">本周新增 <strong>{{ week_articles }}</strong> 篇文章</div>
+                        <div class="timeline-time">近7天</div>
+                    </div>
+                </div>
+                {% endif %}
+                {% if week_comments > 0 %}
+                <div class="timeline-item">
+                    <div class="timeline-dot green"><i class="fas fa-comment"></i></div>
+                    <div class="timeline-body">
+                        <div class="timeline-text">本周收到 <strong>{{ week_comments }}</strong> 条评论</div>
+                        <div class="timeline-time">近7天</div>
+                    </div>
+                </div>
+                {% endif %}
+                {% if pending_comments > 0 %}
+                <div class="timeline-item">
+                    <div class="timeline-dot amber"><i class="fas fa-exclamation"></i></div>
+                    <div class="timeline-body">
+                        <div class="timeline-text">有 <strong>{{ pending_comments }}</strong> 条评论等待审核</div>
+                        <div class="timeline-time"><a href="{% url 'dashboard:comments' %}?status=pending" style="color:#f59e0b;text-decoration:none;">去处理 &rarr;</a></div>
+                    </div>
+                </div>
+                {% endif %}
+                {% for a in recent_articles|slice:":3" %}
+                <div class="timeline-item">
+                    <div class="timeline-dot {% cycle 'blue' 'rose' 'green' %}"><i class="fas fa-file-alt"></i></div>
+                    <div class="timeline-body">
+                        <div class="timeline-text">
+                            {% if a.status == 'published' %}发布了{% else %}保存了草稿{% endif %}
+                            「<strong>{{ a.title|truncatechars:20 }}</strong>」
+                        </div>
+                        <div class="timeline-time">{{ a.created_at|date:"m-d H:i" }}</div>
+                    </div>
+                </div>
+                {% endfor %}
+                {% if week_articles == 0 and week_comments == 0 and pending_comments == 0 %}
+                <div class="empty-state" style="padding:1.5rem;">
+                    <i class="fas fa-inbox"></i>
+                    <p>暂无动态</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    // ===== Animated Stat Counters =====
+    function animateCounters() {
+        document.querySelectorAll('.stat-value[data-target]').forEach(function(el) {
+            var target = parseInt(el.getAttribute('data-target')) || 0;
+            var duration = 1200;
+            var startTime = null;
+
+            function easeOutCubic(t) {
+                return 1 - Math.pow(1 - t, 3);
+            }
+
+            function step(timestamp) {
+                if (!startTime) startTime = timestamp;
+                var progress = Math.min((timestamp - startTime) / duration, 1);
+                var easedProgress = easeOutCubic(progress);
+                var current = Math.floor(easedProgress * target);
+                el.textContent = current.toLocaleString();
+                if (progress < 1) {
+                    requestAnimationFrame(step);
+                } else {
+                    el.textContent = target.toLocaleString();
+                }
+            }
+
+            if (target > 0) {
+                requestAnimationFrame(step);
+            } else {
+                el.textContent = '0';
+            }
+        });
+    }
+
+    // ===== Popular Articles View Bars =====
+    function animateViewBars() {
+        var fills = document.querySelectorAll('.popular-views-fill[data-width]');
+        if (fills.length === 0) return;
+        var maxViews = 0;
+        fills.forEach(function(f) {
+            var v = parseInt(f.getAttribute('data-width')) || 0;
+            if (v > maxViews) maxViews = v;
+        });
+        if (maxViews === 0) return;
+        fills.forEach(function(f, i) {
+            var v = parseInt(f.getAttribute('data-width')) || 0;
+            var pct = Math.max((v / maxViews) * 100, 5);
+            setTimeout(function() {
+                f.style.width = pct + '%';
+            }, 100 + i * 80);
+        });
+    }
+
+    // ===== Welcome Time =====
+    function updateWelcomeTime() {
+        var now = new Date();
+        var h = now.getHours();
+        var greeting = h < 6 ? '夜深了，注意休息' : h < 12 ? '上午好，新的一天开始了' : h < 18 ? '下午好，继续加油' : '晚上好，辛苦了';
+        var timeStr = now.getFullYear() + '/' +
+            String(now.getMonth() + 1).padStart(2, '0') + '/' +
+            String(now.getDate()).padStart(2, '0') + ' ' +
+            String(now.getHours()).padStart(2, '0') + ':' +
+            String(now.getMinutes()).padStart(2, '0') + ':' +
+            String(now.getSeconds()).padStart(2, '0');
+        var el = document.getElementById('welcomeTime');
+        if (el) el.textContent = greeting + '  |  ' + timeStr;
+    }
+
+    // ===== System Time =====
+    function updateSystemTime() {
+        var now = new Date();
+        var timeStr = String(now.getHours()).padStart(2, '0') + ':' +
+            String(now.getMinutes()).padStart(2, '0') + ':' +
+            String(now.getSeconds()).padStart(2, '0');
+        var el = document.getElementById('systemTime');
+        if (el) el.textContent = timeStr;
+    }
+
+    // ===== Init =====
+    animateCounters();
+    animateViewBars();
+    updateWelcomeTime();
+    updateSystemTime();
+    setInterval(updateWelcomeTime, 1000);
+    setInterval(updateSystemTime, 1000);
+})();
+
+// ===== Approve Comment =====
+function approveComment(commentId) {
+    postAction("{% url 'dashboard:comments' %}", {
+        action: 'approve',
+        comment_ids: [commentId]
+    }).then(function(res) {
+        if (res.status === 'success' || res.ok) {
+            showToast('评论已批准', 'success');
+            setTimeout(function() { location.reload(); }, 800);
+        } else {
+            showToast(res.message || '操作失败', 'error');
+        }
+    }).catch(function() {
+        showToast('网络错误', 'error');
+    });
+}
+</script>
+{% endblock %}

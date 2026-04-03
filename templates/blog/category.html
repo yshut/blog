@@ -1,0 +1,162 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ category.name }} - NewsFlow{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <!-- Category Header -->
+        <div class="category-header slide-up mb-4">
+            <div class="d-flex align-items-center gap-3">
+                <div class="category-header-icon">
+                    <i class="fas fa-folder-open"></i>
+                </div>
+                <div>
+                    <h2 style="font-weight: 700; margin-bottom: 0.25rem; color: var(--text-primary);">{{ category.name }}</h2>
+                    {% if category.description %}
+                    <p style="color: var(--text-muted); margin-bottom: 0; font-size: 0.9rem;">{{ category.description }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Articles Grid -->
+        <div class="row">
+            {% for article in articles %}
+            <div class="col-md-6 mb-4 slide-up" style="animation-delay: {{ forloop.counter0 }}00ms;">
+                <article class="article-card h-100">
+                    {% if article.cover_image %}
+                    <div class="card-img-wrapper">
+                        <img src="{{ article.cover_image.url }}" class="card-img-top" alt="{{ article.title }}" loading="lazy">
+                    </div>
+                    {% endif %}
+
+                    <div class="card-body d-flex flex-column">
+                        <div class="mb-2 d-flex flex-wrap gap-1">
+                            {% if article.is_top %}
+                            <span class="top-badge"><i class="fas fa-thumbtack"></i> 置顶</span>
+                            {% endif %}
+                            {% if article.is_ai_generated %}
+                            <span class="ai-badge"><i class="fas fa-robot"></i></span>
+                            {% endif %}
+                        </div>
+
+                        <h2 class="card-title">
+                            <a href="{% url 'blog:article_detail' article.slug %}">{{ article.title }}</a>
+                        </h2>
+
+                        <p class="card-text small flex-grow-1" style="color: var(--text-muted); line-height: 1.6;">
+                            {{ article.excerpt|truncatewords:25 }}
+                        </p>
+
+                        <div class="mt-auto">
+                            <div class="article-meta">
+                                <span><i class="fas fa-user"></i> {{ article.author.username }}</span>
+                                <span><i class="fas fa-calendar"></i> {{ article.created_at|date:"m-d" }}</span>
+                                <span><i class="fas fa-eye"></i> {{ article.views }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+            </div>
+            {% empty %}
+            <div class="col-12">
+                <div class="empty-state">
+                    <div class="empty-icon">
+                        <i class="fas fa-folder-open"></i>
+                    </div>
+                    <h4>该分类下暂无文章</h4>
+                    <p>快来发布第一篇吧</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Pagination -->
+        {% if articles.has_other_pages %}
+        <nav aria-label="Page navigation" class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if articles.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ articles.previous_page_number }}">
+                        <i class="fas fa-chevron-left"></i>
+                    </a>
+                </li>
+                {% endif %}
+                {% for num in articles.paginator.page_range %}
+                {% if articles.number == num %}
+                <li class="page-item active"><a class="page-link" href="#">{{ num }}</a></li>
+                {% elif num > articles.number|add:'-3' and num < articles.number|add:'3' %}
+                <li class="page-item"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>
+                {% endif %}
+                {% endfor %}
+                {% if articles.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ articles.next_page_number }}">
+                        <i class="fas fa-chevron-right"></i>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+
+    <!-- Sidebar -->
+    <aside class="col-lg-4">
+        <div class="sidebar-card fade-in">
+            <h5><i class="fas fa-arrow-left"></i> 导航</h5>
+            <a href="{% url 'blog:index' %}" class="btn btn-ghost w-100">
+                <i class="fas fa-home"></i> 返回首页
+            </a>
+        </div>
+    </aside>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .category-header {
+        background: var(--bg-card);
+        border-radius: var(--radius-lg);
+        padding: 2rem;
+        border: 1px solid var(--border-color);
+    }
+
+    .category-header-icon {
+        width: 52px;
+        height: 52px;
+        border-radius: var(--radius-md);
+        background: rgba(244, 63, 94, 0.1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--accent);
+        font-size: 1.3rem;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        background: var(--bg-card);
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--border-color);
+    }
+
+    .empty-icon {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: rgba(99, 102, 241, 0.1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1.5rem;
+        font-size: 2rem;
+        color: var(--primary);
+    }
+
+    .empty-state h4 { color: var(--text-primary); font-weight: 700; margin-bottom: 0.5rem; }
+    .empty-state p { color: var(--text-muted); }
+</style>
+{% endblock %}

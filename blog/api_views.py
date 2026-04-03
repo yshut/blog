@@ -201,9 +201,13 @@ class ArticleAPIView(APIView):
             if date_to:
                 articles = articles.filter(published_time__lte=date_to)
 
-            # 分页
-            page = int(request.query_params.get('page', 1))
-            page_size = int(request.query_params.get('page_size', 20))
+            # 分页（参数校验防止异常）
+            try:
+                page = max(1, int(request.query_params.get('page', 1)))
+                page_size = min(100, max(1, int(request.query_params.get('page_size', 20))))
+            except (ValueError, TypeError):
+                page = 1
+                page_size = 20
             start = (page - 1) * page_size
             end = start + page_size
 
@@ -227,18 +231,14 @@ class ArticleAPIView(APIView):
         if serializer.is_valid():
             article = serializer.save(
                 author=request.api_user,
-                is_ai_generated=True
+                is_ai_generated=True,
+                ai_source=request.data.get('ai_source', ''),
             )
 
-            # 如果指定了ai_source
-            if 'ai_source' in request.data:
-                article.ai_source = request.data['ai_source']
-                article.save()
-
             # 发布时间
-            if article.status == 'published':
+            if article.status == 'published' and not article.published_at:
                 article.published_at = timezone.now()
-                article.save()
+                article.save(update_fields=['published_at'])
 
             return Response(
                 ArticleSerializer(article).data,

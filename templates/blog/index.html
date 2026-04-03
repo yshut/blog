@@ -1,60 +1,103 @@
 {% extends 'base.html' %}
 
-{% block title %}AI资讯聚合 - 咨询博客{% endblock %}
+{% block title %}NewsFlow - AI资讯聚合平台{% endblock %}
 
 {% block content %}
-<!-- Hero横幅 -->
-<div class="alert alert-info mb-4" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 15px;">
-    <div class="row align-items-center">
-        <div class="col-md-8">
-            <h4 class="mb-2"><i class="fas fa-robot"></i> AI资讯聚合</h4>
-            <p class="mb-0 opacity-75">由AI自动搜索并总结实时资讯、新闻文章，每日更新</p>
+<!-- Hero Section -->
+<div class="hero-section mb-4 slide-up">
+    <div class="hero-content">
+        <div class="hero-text">
+            <div class="hero-label">
+                <span class="pulse-dot"></span>
+                AI驱动 &middot; 实时更新
+            </div>
+            <h1 class="hero-title">智能资讯聚合</h1>
+            <p class="hero-desc">由AI自动搜索、分析并总结全网热点资讯，为您提供最有价值的信息流</p>
+            <div class="hero-actions">
+                {% if user.is_authenticated %}
+                <a href="{% url 'blog:create_article' %}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> 发布资讯
+                </a>
+                {% endif %}
+                <a href="#articles" class="btn btn-ghost">
+                    <i class="fas fa-arrow-down"></i> 浏览资讯
+                </a>
+            </div>
         </div>
-        <div class="col-md-4 text-end">
-            <a href="{% url 'blog:create_article' %}" class="btn btn-light btn-lg">
-                <i class="fas fa-plus"></i> 发布资讯
-            </a>
+        <div class="hero-stats">
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fas fa-newspaper"></i></div>
+                <div class="stat-info">
+                    <span class="stat-number">{{ articles.paginator.count|default:0 }}</span>
+                    <span class="stat-label">资讯文章</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon" style="background: rgba(244, 63, 94, 0.1); color: var(--accent);"><i class="fas fa-folder"></i></div>
+                <div class="stat-info">
+                    <span class="stat-number">{{ categories|length|default:0 }}</span>
+                    <span class="stat-label">资讯分类</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon" style="background: rgba(16, 185, 129, 0.1); color: var(--success);"><i class="fas fa-tags"></i></div>
+                <div class="stat-info">
+                    <span class="stat-number">{{ tags|length|default:0 }}</span>
+                    <span class="stat-label">热门标签</span>
+                </div>
+            </div>
         </div>
     </div>
 </div>
 
-<div class="row">
-    <!-- 主内容区 -->
+<div class="row" id="articles">
+    <!-- Main Content -->
     <div class="col-lg-8">
-        <!-- 筛选栏 -->
-        <div class="d-flex flex-wrap gap-2 mb-4">
-            <a href="{% url 'blog:index' %}" class="btn btn-outline-primary btn-sm {% if not current_category and not current_tag %}active{% endif %}">
-                全部
-            </a>
-            <a href="?category=keji" class="btn btn-outline-primary btn-sm {% if current_category == 'keji' %}active{% endif %}">
-                <i class="fas fa-microchip"></i> 科技
-            </a>
-            <a href="?category=caijing" class="btn btn-outline-primary btn-sm {% if current_category == 'caijing' %}active{% endif %}">
-                <i class="fas fa-chart-line"></i> 财经
-            </a>
-            <a href="?category=xinwen" class="btn btn-outline-primary btn-sm {% if current_category == 'xinwen' %}active{% endif %}">
-                <i class="fas fa-newspaper"></i> 新闻
-            </a>
-            <a href="?category=hangye" class="btn btn-outline-primary btn-sm {% if current_category == 'hangye' %}active{% endif %}">
-                <i class="fas fa-building"></i> 行业
-            </a>
-            <a href="?is_ai=true" class="btn btn-outline-success btn-sm {% if request.GET.is_ai %}active{% endif %}">
-                <i class="fas fa-robot"></i> AI生成
-            </a>
+        <!-- Filter Bar -->
+        <div class="filter-bar mb-4 fade-in">
+            <div class="filter-tabs">
+                <a href="{% url 'blog:index' %}" class="filter-tab {% if not current_category and not current_tag and not request.GET.is_ai %}active{% endif %}">
+                    <i class="fas fa-fire"></i> 全部
+                </a>
+                <a href="?category=keji" class="filter-tab {% if current_category == 'keji' %}active{% endif %}">
+                    <i class="fas fa-microchip"></i> 科技
+                </a>
+                <a href="?category=caijing" class="filter-tab {% if current_category == 'caijing' %}active{% endif %}">
+                    <i class="fas fa-chart-line"></i> 财经
+                </a>
+                <a href="?category=xinwen" class="filter-tab {% if current_category == 'xinwen' %}active{% endif %}">
+                    <i class="fas fa-newspaper"></i> 新闻
+                </a>
+                <a href="?category=hangye" class="filter-tab {% if current_category == 'hangye' %}active{% endif %}">
+                    <i class="fas fa-building"></i> 行业
+                </a>
+                <a href="?is_ai=true" class="filter-tab ai-tab {% if request.GET.is_ai %}active{% endif %}">
+                    <i class="fas fa-robot"></i> AI
+                </a>
+            </div>
         </div>
 
+        <!-- Articles Grid -->
         <div class="row">
             {% for article in articles %}
-            <div class="col-md-6 mb-4">
+            <div class="col-md-6 mb-4 slide-up" style="animation-delay: {{ forloop.counter0|floatformat:0 }}00ms;">
                 <article class="article-card h-100">
                     {% if article.cover_image %}
-                    <img src="{{ article.cover_image.url }}" class="card-img-top" alt="{{ article.title }}">
+                    <div class="card-img-wrapper">
+                        <img src="{{ article.cover_image.url }}" class="card-img-top" alt="{{ article.title }}" loading="lazy">
+                    </div>
+                    {% else %}
+                    <div class="card-img-wrapper">
+                        <div class="card-img-placeholder">
+                            <i class="fas fa-newspaper"></i>
+                        </div>
+                    </div>
                     {% endif %}
 
                     <div class="card-body d-flex flex-column">
-                        <!-- 来源信息 -->
+                        <!-- Source Info -->
                         {% if article.source_name %}
-                        <div class="mb-2">
+                        <div class="mb-2 d-flex align-items-center">
                             <span class="source-badge">
                                 <i class="fas fa-globe"></i> {{ article.source_name }}
                             </span>
@@ -66,8 +109,8 @@
                         </div>
                         {% endif %}
 
-                        <!-- 标签 -->
-                        <div class="mb-2">
+                        <!-- Badges -->
+                        <div class="mb-2 d-flex flex-wrap gap-1">
                             {% if article.is_top %}
                             <span class="top-badge"><i class="fas fa-thumbtack"></i> 置顶</span>
                             {% endif %}
@@ -76,43 +119,42 @@
                                 {{ article.category.name }}
                             </a>
                             {% endif %}
+                            {% if article.is_ai_generated %}
+                            <span class="ai-badge"><i class="fas fa-robot"></i> AI</span>
+                            {% endif %}
                         </div>
 
-                        <!-- 标题 -->
+                        <!-- Title -->
                         <h2 class="card-title">
                             <a href="{% url 'blog:article_detail' article.slug %}">
                                 {{ article.title }}
-                                {% if article.is_ai_generated %}
-                                <span class="ai-badge" title="AI生成"><i class="fas fa-robot"></i></span>
-                                {% endif %}
                             </a>
                         </h2>
 
-                        <!-- AI摘要 -->
+                        <!-- Summary -->
                         {% if article.summary %}
-                        <p class="card-text text-muted small flex-grow-1">
-                            <i class="fas fa-quote-left text-primary me-1"></i>
-                            {{ article.summary|truncatewords:50 }}
+                        <p class="card-text small flex-grow-1" style="color: var(--text-muted); line-height: 1.6;">
+                            {{ article.summary|truncatewords:35 }}
                         </p>
                         {% else %}
-                        <p class="card-text text-muted flex-grow-1">
-                            {{ article.excerpt|truncatewords:30 }}
+                        <p class="card-text small flex-grow-1" style="color: var(--text-muted); line-height: 1.6;">
+                            {{ article.excerpt|truncatewords:25 }}
                         </p>
                         {% endif %}
 
-                        <!-- 标签 -->
+                        <!-- Tags -->
                         <div class="mt-auto">
-                            <div class="mb-2">
+                            <div class="mb-2 d-flex flex-wrap gap-1">
                                 {% for tag in article.tags.all|slice:":3" %}
-                                <a href="{% url 'blog:tag' tag.slug %}" class="tag-badge me-1">{{ tag.name }}</a>
+                                <a href="{% url 'blog:tag' tag.slug %}" class="tag-badge">{{ tag.name }}</a>
                                 {% endfor %}
                             </div>
 
-                            <!-- 元信息 -->
+                            <!-- Meta -->
                             <div class="article-meta">
                                 <span><i class="fas fa-user"></i> {{ article.author.username }}</span>
-                                <span class="ms-3"><i class="fas fa-calendar"></i> {{ article.created_at|date:"Y-m-d" }}</span>
-                                <span class="ms-3"><i class="fas fa-eye"></i> {{ article.views }}</span>
+                                <span><i class="fas fa-calendar"></i> {{ article.created_at|date:"m-d" }}</span>
+                                <span><i class="fas fa-eye"></i> {{ article.views }}</span>
                             </div>
                         </div>
                     </div>
@@ -120,16 +162,23 @@
             </div>
             {% empty %}
             <div class="col-12">
-                <div class="alert alert-info text-center">
-                    <i class="fas fa-info-circle"></i> 暂无资讯，AI正在为您搜索...
+                <div class="empty-state">
+                    <div class="empty-icon">
+                        <i class="fas fa-satellite-dish"></i>
+                    </div>
+                    <h4>暂无资讯</h4>
+                    <p>AI正在为您搜索最新资讯，请稍后再来...</p>
+                    <a href="{% url 'blog:index' %}" class="btn btn-primary">
+                        <i class="fas fa-sync"></i> 刷新页面
+                    </a>
                 </div>
             </div>
             {% endfor %}
         </div>
 
-        <!-- 分页 -->
+        <!-- Pagination -->
         {% if articles.has_other_pages %}
-        <nav aria-label="Page navigation">
+        <nav aria-label="Page navigation" class="mt-4">
             <ul class="pagination justify-content-center">
                 {% if articles.has_previous %}
                 <li class="page-item">
@@ -140,9 +189,15 @@
                 {% endif %}
 
                 {% for num in articles.paginator.page_range %}
-                <li class="page-item {% if articles.number == num %}active{% endif %}">
+                {% if articles.number == num %}
+                <li class="page-item active">
+                    <a class="page-link" href="#">{{ num }}</a>
+                </li>
+                {% elif num > articles.number|add:'-3' and num < articles.number|add:'3' %}
+                <li class="page-item">
                     <a class="page-link" href="?page={{ num }}{% if search_query %}&q={{ search_query }}{% endif %}{% if current_category %}&category={{ current_category }}{% endif %}{% if current_tag %}&tag={{ current_tag }}{% endif %}">{{ num }}</a>
                 </li>
+                {% endif %}
                 {% endfor %}
 
                 {% if articles.has_next %}
@@ -157,75 +212,74 @@
         {% endif %}
     </div>
 
-    <!-- 侧边栏 -->
+    <!-- Sidebar -->
     <aside class="col-lg-4">
-        <!-- 快速筛选 -->
-        <div class="sidebar-card">
-            <h5><i class="fas fa-filter"></i> 快速筛选</h5>
+        <!-- Quick Filters -->
+        <div class="sidebar-card fade-in">
+            <h5><i class="fas fa-bolt"></i> 快速筛选</h5>
             <div class="d-grid gap-2">
-                <a href="?is_ai=true" class="btn btn-outline-primary btn-sm">
-                    <i class="fas fa-robot"></i> AI生成的资讯
+                <a href="?is_ai=true" class="sidebar-filter-btn">
+                    <i class="fas fa-robot"></i>
+                    <span>AI生成的资讯</span>
+                    <i class="fas fa-chevron-right ms-auto"></i>
                 </a>
-                <a href="?tag=ai" class="btn btn-outline-info btn-sm">
-                    <i class="fas fa-brain"></i> AI相关
+                <a href="?tag=ai" class="sidebar-filter-btn">
+                    <i class="fas fa-brain"></i>
+                    <span>AI相关</span>
+                    <i class="fas fa-chevron-right ms-auto"></i>
                 </a>
-                <a href="?tag=zhineng" class="btn btn-outline-info btn-sm">
-                    <i class="fas fa-microchip"></i> 智能硬件
+                <a href="?tag=zhineng" class="sidebar-filter-btn">
+                    <i class="fas fa-microchip"></i>
+                    <span>智能硬件</span>
+                    <i class="fas fa-chevron-right ms-auto"></i>
                 </a>
             </div>
         </div>
 
-        <!-- 分类 -->
-        <div class="sidebar-card">
+        <!-- Categories -->
+        <div class="sidebar-card fade-in">
             <h5><i class="fas fa-folder"></i> 资讯分类</h5>
-            <ul class="list-unstyled">
+            <ul class="list-unstyled mb-0">
                 {% for category in categories %}
-                <li class="mb-2">
-                    <a href="{% url 'blog:category' category.slug %}" class="text-decoration-none">
-                        <i class="fas fa-chevron-right"></i> {{ category.name }}
-                        <span class="badge bg-secondary float-end">{{ category.articles.count }}</span>
+                <li>
+                    <a href="{% url 'blog:category' category.slug %}" class="sidebar-category-item">
+                        <span class="category-dot"></span>
+                        <span>{{ category.name }}</span>
+                        <span class="category-count">{{ category.article_count }}</span>
                     </a>
                 </li>
                 {% empty %}
-                <li class="text-muted">暂无分类</li>
+                <li class="text-center py-3" style="color: var(--text-muted); font-size: 0.85rem;">暂无分类</li>
                 {% endfor %}
             </ul>
         </div>
 
-        <!-- 标签云 -->
-        <div class="sidebar-card">
+        <!-- Tags Cloud -->
+        <div class="sidebar-card fade-in">
             <h5><i class="fas fa-tags"></i> 热门标签</h5>
             <div class="d-flex flex-wrap gap-2">
                 {% for tag in tags %}
                 <a href="{% url 'blog:tag' tag.slug %}" class="tag-badge">
-                    {{ tag.name }} ({{ tag.articles.count }})
+                    {{ tag.name }}
+                    <span style="opacity: 0.7;">({{ tag.article_count }})</span>
                 </a>
                 {% empty %}
-                <span class="text-muted">暂无标签</span>
+                <span style="color: var(--text-muted); font-size: 0.85rem;">暂无标签</span>
                 {% endfor %}
             </div>
         </div>
 
-        <!-- API说明 -->
-        <div class="sidebar-card">
+        <!-- API Info -->
+        <div class="sidebar-card fade-in">
             <h5><i class="fas fa-code"></i> API接口</h5>
-            <p class="text-muted small mb-3">
-                通过API让AI自动发布资讯文章，支持来源链接、AI摘要等功能。
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1rem;">
+                通过API让AI自动发布资讯文章
             </p>
-            <div class="mb-2">
-                <small class="text-muted">示例请求：</small>
-                <pre class="bg-dark text-light p-2 rounded small mb-0"><code>POST /api/articles/
-{
-  "title": "AI重塑新闻行业",
-  "content": "...",
-  "source_url": "https://...",
-  "source_name": "36氪",
-  "summary": "AI正在改变新闻行业...",
-  "ai_source": "Claude"
-}</code></pre>
+            <div class="api-code-block">
+                <code>POST /api/articles/</code>
             </div>
-            <a href="/api/status/" class="btn btn-sm btn-outline-primary">
-                查看API状态
+            <a href="/api/status/" class="btn btn-outline-primary btn-sm w-100 mt-3">
+                <i class="fas fa-plug"></i> 查看API状态
             </a>
         </div>
     </aside>
@@ -234,34 +288,342 @@
 
 {% block extra_css %}
 <style>
-    .source-badge {
-        background: linear-gradient(135deg, #11998e, #38ef7d);
-        color: white;
-        padding: 0.2rem 0.6rem;
-        border-radius: 5px;
+    /* Hero Section */
+    .hero-section {
+        background: var(--bg-card);
+        border-radius: var(--radius-xl);
+        padding: 2.5rem;
+        border: 1px solid var(--border-color);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .hero-section::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -20%;
+        width: 400px;
+        height: 400px;
+        background: radial-gradient(circle, rgba(99, 102, 241, 0.08) 0%, transparent 70%);
+        border-radius: 50%;
+    }
+
+    .hero-section::after {
+        content: '';
+        position: absolute;
+        bottom: -30%;
+        left: -10%;
+        width: 300px;
+        height: 300px;
+        background: radial-gradient(circle, rgba(6, 182, 212, 0.06) 0%, transparent 70%);
+        border-radius: 50%;
+    }
+
+    .hero-content {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 2rem;
+    }
+
+    .hero-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: rgba(99, 102, 241, 0.1);
+        color: var(--primary);
+        padding: 0.35rem 1rem;
+        border-radius: 50px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        border: 1px solid rgba(99, 102, 241, 0.2);
+    }
+
+    .pulse-dot {
+        width: 8px;
+        height: 8px;
+        background: var(--success);
+        border-radius: 50%;
+        animation: pulse 2s infinite;
+    }
+
+    .hero-title {
+        font-size: 2.2rem;
+        font-weight: 800;
+        color: var(--text-primary);
+        margin-bottom: 0.75rem;
+        line-height: 1.2;
+    }
+
+    .hero-desc {
+        color: var(--text-muted);
+        font-size: 1rem;
+        margin-bottom: 1.5rem;
+        max-width: 480px;
+    }
+
+    .hero-actions {
+        display: flex;
+        gap: 0.75rem;
+    }
+
+    .hero-stats {
+        display: flex;
+        gap: 1rem;
+    }
+
+    .stat-card {
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        padding: 1.25rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        min-width: 140px;
+        transition: var(--transition);
+    }
+
+    .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .stat-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: var(--radius-sm);
+        background: rgba(99, 102, 241, 0.1);
+        color: var(--primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.1rem;
+    }
+
+    .stat-number {
+        display: block;
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        line-height: 1.2;
+    }
+
+    .stat-label {
         font-size: 0.75rem;
+        color: var(--text-muted);
+    }
+
+    /* Filter Bar */
+    .filter-bar {
+        background: var(--bg-card);
+        border-radius: var(--radius-lg);
+        padding: 0.5rem;
+        border: 1px solid var(--border-color);
+    }
+
+    .filter-tabs {
+        display: flex;
+        gap: 0.25rem;
+        overflow-x: auto;
+        scrollbar-width: none;
+    }
+
+    .filter-tabs::-webkit-scrollbar { display: none; }
+
+    .filter-tab {
+        padding: 0.5rem 1rem;
+        border-radius: var(--radius-sm);
+        font-size: 0.85rem;
+        font-weight: 500;
+        color: var(--text-secondary);
+        text-decoration: none;
+        white-space: nowrap;
+        transition: var(--transition);
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+    }
+
+    .filter-tab:hover {
+        background: rgba(99, 102, 241, 0.08);
+        color: var(--primary);
+    }
+
+    .filter-tab.active {
+        background: var(--primary);
+        color: white;
+    }
+
+    .filter-tab.ai-tab.active {
+        background: linear-gradient(135deg, #8b5cf6, #a855f7);
+    }
+
+    /* Card Image Placeholder */
+    .card-img-placeholder {
+        height: 140px;
+        background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(139, 92, 246, 0.08) 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        color: var(--primary-light);
+        opacity: 0.5;
+    }
+
+    /* Empty State */
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        background: var(--bg-card);
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--border-color);
+    }
+
+    .empty-icon {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: rgba(99, 102, 241, 0.1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1.5rem;
+        font-size: 2rem;
+        color: var(--primary);
+    }
+
+    .empty-state h4 {
+        color: var(--text-primary);
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+
+    .empty-state p {
+        color: var(--text-muted);
+        margin-bottom: 1.5rem;
+    }
+
+    /* Sidebar Filter Buttons */
+    .sidebar-filter-btn {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem 1rem;
+        border-radius: var(--radius-sm);
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        color: var(--text-secondary);
+        text-decoration: none;
+        font-size: 0.85rem;
+        font-weight: 500;
+        transition: var(--transition);
+    }
+
+    .sidebar-filter-btn:hover {
+        border-color: var(--primary);
+        color: var(--primary);
+        background: rgba(99, 102, 241, 0.05);
+    }
+
+    .sidebar-filter-btn i:first-child {
+        width: 20px;
+        text-align: center;
+        color: var(--primary);
+    }
+
+    /* Sidebar Category Items */
+    .sidebar-category-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.6rem 0;
+        text-decoration: none;
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+        transition: var(--transition);
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .sidebar-category-item:last-child {
+        border-bottom: none;
+    }
+
+    .sidebar-category-item:hover {
+        color: var(--primary);
+    }
+
+    .category-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--primary-light);
+        flex-shrink: 0;
+    }
+
+    .category-count {
+        margin-left: auto;
+        background: var(--bg-primary);
+        padding: 0.15rem 0.5rem;
+        border-radius: 50px;
+        font-size: 0.75rem;
+        color: var(--text-muted);
         font-weight: 500;
     }
 
-    .source-time {
-        color: #6c757d;
-        font-size: 0.75rem;
-        margin-left: 0.5rem;
+    /* API Code Block */
+    .api-code-block {
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-sm);
+        padding: 0.75rem 1rem;
+        font-family: 'Fira Code', monospace;
+        font-size: 0.8rem;
+        color: var(--primary);
     }
 
-    .article-card .card-title {
-        font-size: 1.1rem;
-        min-height: 2.5rem;
+    /* Responsive */
+    @media (max-width: 992px) {
+        .hero-content {
+            flex-direction: column;
+            text-align: center;
+        }
+        .hero-desc {
+            max-width: 100%;
+        }
+        .hero-actions {
+            justify-content: center;
+        }
+        .hero-stats {
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .stat-card {
+            min-width: 120px;
+        }
     }
 
-    .article-card .card-title a {
-        color: #2c3e50;
-        text-decoration: none;
-        transition: color 0.3s;
-    }
-
-    .article-card .card-title a:hover {
-        color: #3498db;
+    @media (max-width: 576px) {
+        .hero-section {
+            padding: 1.5rem;
+        }
+        .hero-title {
+            font-size: 1.6rem;
+        }
+        .hero-stats {
+            gap: 0.5rem;
+        }
+        .stat-card {
+            min-width: 100px;
+            padding: 0.75rem;
+        }
+        .stat-number {
+            font-size: 1.1rem;
+        }
     }
 </style>
 {% endblock %}

@@ -1,0 +1,189 @@
+{% extends 'admin_custom/base.html' %}
+
+{% block page_title %}分类 & 标签{% endblock %}
+
+{% block content %}
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+    <!-- Categories -->
+    <div class="data-card">
+        <div class="data-card-header">
+            <span class="data-card-title"><i class="fas fa-folder" style="color:#f43f5e;margin-right:.4rem;"></i> 分类管理</span>
+            <button class="btn-primary-custom" style="font-size:.75rem;padding:.35rem .85rem;" onclick="openModal('catModal')">
+                <i class="fas fa-plus"></i> 新建
+            </button>
+        </div>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>名称</th>
+                    <th>别名</th>
+                    <th>文章数</th>
+                    <th style="width:50px;"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for cat in categories %}
+                <tr id="cat-{{ cat.id }}">
+                    <td style="font-weight:600;font-size:.85rem;color:var(--text);">{{ cat.name }}</td>
+                    <td style="font-size:.8rem;color:var(--text-3);font-family:monospace;">{{ cat.slug }}</td>
+                    <td>
+                        <span style="background:rgba(99,102,241,.1);color:#6366f1;padding:2px 8px;border-radius:10px;font-size:.7rem;font-weight:600;">
+                            {{ cat.article_count }}
+                        </span>
+                    </td>
+                    <td>
+                        <button class="btn-sm-action danger" title="删除" onclick="deleteCategory({{ cat.id }},'{{ cat.name }}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="4"><div class="empty-state"><i class="fas fa-folder-open"></i><p>暂无分类</p></div></td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Tags -->
+    <div class="data-card">
+        <div class="data-card-header">
+            <span class="data-card-title"><i class="fas fa-tags" style="color:#6366f1;margin-right:.4rem;"></i> 标签管理</span>
+            <button class="btn-primary-custom" style="font-size:.75rem;padding:.35rem .85rem;" onclick="openModal('tagModal')">
+                <i class="fas fa-plus"></i> 新建
+            </button>
+        </div>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>名称</th>
+                    <th>别名</th>
+                    <th>文章数</th>
+                    <th style="width:50px;"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for tag in tags %}
+                <tr id="tag-{{ tag.id }}">
+                    <td style="font-weight:600;font-size:.85rem;color:var(--text);">{{ tag.name }}</td>
+                    <td style="font-size:.8rem;color:var(--text-3);font-family:monospace;">{{ tag.slug }}</td>
+                    <td>
+                        <span style="background:rgba(6,182,212,.1);color:#06b6d4;padding:2px 8px;border-radius:10px;font-size:.7rem;font-weight:600;">
+                            {{ tag.article_count }}
+                        </span>
+                    </td>
+                    <td>
+                        <button class="btn-sm-action danger" title="删除" onclick="deleteTag({{ tag.id }},'{{ tag.name }}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="4"><div class="empty-state"><i class="fas fa-tag"></i><p>暂无标签</p></div></td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Create Category Modal -->
+<div class="modal-overlay" id="catModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <span class="modal-title">新建分类</span>
+            <button class="modal-close" onclick="closeModal('catModal')"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <div style="margin-bottom:1rem;">
+                <label class="form-label-custom">分类名称 *</label>
+                <input type="text" class="form-input" id="catName" placeholder="如：科技动态" oninput="autoSlug(this,'catSlug')">
+            </div>
+            <div style="margin-bottom:1rem;">
+                <label class="form-label-custom">URL别名 *</label>
+                <input type="text" class="form-input" id="catSlug" placeholder="如：keji">
+            </div>
+            <div>
+                <label class="form-label-custom">描述（可选）</label>
+                <input type="text" class="form-input" id="catDesc" placeholder="分类描述">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-ghost-custom" onclick="closeModal('catModal')">取消</button>
+            <button class="btn-primary-custom" onclick="createCategory()"><i class="fas fa-check"></i> 创建</button>
+        </div>
+    </div>
+</div>
+
+<!-- Create Tag Modal -->
+<div class="modal-overlay" id="tagModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <span class="modal-title">新建标签</span>
+            <button class="modal-close" onclick="closeModal('tagModal')"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <div style="margin-bottom:1rem;">
+                <label class="form-label-custom">标签名称 *</label>
+                <input type="text" class="form-input" id="tagName" placeholder="如：人工智能" oninput="autoSlug(this,'tagSlug')">
+            </div>
+            <div>
+                <label class="form-label-custom">URL别名 *</label>
+                <input type="text" class="form-input" id="tagSlug" placeholder="如：ai">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-ghost-custom" onclick="closeModal('tagModal')">取消</button>
+            <button class="btn-primary-custom" onclick="createTag()"><i class="fas fa-check"></i> 创建</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    @media (max-width: 768px) {
+        div[style*="grid-template-columns:1fr 1fr"] { grid-template-columns: 1fr !important; }
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function autoSlug(input, targetId) {
+    // Simple pinyin-less slug: just lowercase and replace spaces
+    document.getElementById(targetId).value = input.value.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9\u4e00-\u9fa5-]/g, '');
+}
+
+async function createCategory() {
+    const name = document.getElementById('catName').value.trim();
+    const slug = document.getElementById('catSlug').value.trim();
+    const desc = document.getElementById('catDesc').value.trim();
+    if (!name || !slug) { showToast('名称和别名不能为空', 'error'); return; }
+    const res = await postAction('{% url "dashboard:category_create" %}', { name, slug, description: desc });
+    if (res.message) { showToast(res.message); setTimeout(() => location.reload(), 800); }
+    else if (res.error) showToast(res.error, 'error');
+}
+
+async function deleteCategory(id, name) {
+    if (!confirm(`确定删除分类「${name}」吗？`)) return;
+    const res = await postAction(`/dashboard/categories/${id}/delete/`);
+    if (res.message) { document.getElementById('cat-' + id)?.remove(); showToast(res.message); }
+    else if (res.error) showToast(res.error, 'error');
+}
+
+async function createTag() {
+    const name = document.getElementById('tagName').value.trim();
+    const slug = document.getElementById('tagSlug').value.trim();
+    if (!name || !slug) { showToast('名称和别名不能为空', 'error'); return; }
+    const res = await postAction('{% url "dashboard:tag_create" %}', { name, slug });
+    if (res.message) { showToast(res.message); setTimeout(() => location.reload(), 800); }
+    else if (res.error) showToast(res.error, 'error');
+}
+
+async function deleteTag(id, name) {
+    if (!confirm(`确定删除标签「${name}」吗？`)) return;
+    const res = await postAction(`/dashboard/tags/${id}/delete/`);
+    if (res.message) { document.getElementById('tag-' + id)?.remove(); showToast(res.message); }
+    else if (res.error) showToast(res.error, 'error');
+}
+</script>
+{% endblock %}
