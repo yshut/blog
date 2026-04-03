@@ -70,14 +70,14 @@ class Article(models.Model):
 
     cover_image = models.ImageField('封面图片', upload_to='articles/%Y/%m/', blank=True, null=True)
 
-    status = models.CharField('状态', max_length=10, choices=STATUS_CHOICES, default='draft')
+    status = models.CharField('状态', max_length=10, choices=STATUS_CHOICES, default='draft', db_index=True)
     views = models.PositiveIntegerField('阅读量', default=0)
     likes = models.PositiveIntegerField('点赞数', default=0)
 
-    is_top = models.BooleanField('置顶', default=False)
+    is_top = models.BooleanField('置顶', default=False, db_index=True)
     allow_comment = models.BooleanField('允许评论', default=True)
 
-    created_at = models.DateTimeField('创建时间', auto_now_add=True)
+    created_at = models.DateTimeField('创建时间', auto_now_add=True, db_index=True)
     updated_at = models.DateTimeField('更新时间', auto_now=True)
     published_at = models.DateTimeField('发布时间', null=True, blank=True)
 
@@ -95,6 +95,10 @@ class Article(models.Model):
         verbose_name = '文章'
         verbose_name_plural = '文章'
         ordering = ['-is_top', '-created_at']
+        indexes = [
+            models.Index(fields=['-is_top', '-created_at']),
+            models.Index(fields=['status', '-created_at']),
+        ]
 
     def __str__(self):
         return self.title
@@ -120,8 +124,10 @@ class Article(models.Model):
         return reverse('blog:article_detail', args=[self.slug])
 
     def increase_views(self):
-        self.views += 1
-        self.save(update_fields=['views'])
+        """增加阅读量，使用 F 表达式避免竞态条件"""
+        from django.db.models import F
+        Article.objects.filter(pk=self.pk).update(views=F('views') + 1)
+        self.views = F('views') + 1
 
 
 class Comment(models.Model):

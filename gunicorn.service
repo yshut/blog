@@ -1,0 +1,17 @@
+[Unit]
+Description=Gunicorn daemon for Django Blog
+After=network.target
+
+[Service]
+User=root
+Group=root
+WorkingDirectory=/var/www/blog
+ExecStart=/var/www/blog/venv/bin/gunicorn \
+          --access-logfile - \
+          --workers 2 \
+          --threads 2 \
+          --bind unix:/var/www/blog/gunicorn.sock \
+          blog_project.wsgi:application
+
+[Install]
+WantedBy=multi-user.target

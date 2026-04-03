@@ -1,8 +1,14 @@
 # Django 博客系统依赖
-Django>=4.2
-markdown
-bleach
-PyMySQL
-django-tinymce  # 富文本编辑器
-djangorestframework  # API接口
-Pillow  # 图片处理
+# 版本固定以确保环境一致性
+
+Django>=4.2,<5.0
+markdown>=3.5
+bleach>=6.1
+PyMySQL>=1.1
+django-tinymce>=4.0
+djangorestframework>=3.14
+Pillow>=10.0
+gunicorn>=21.0
+
+# 开发工具
+python-dotenv>=1.0

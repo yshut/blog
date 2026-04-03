@@ -36,3 +36,6 @@ Thumbs.db
 
 # Static files (collected)
 staticfiles/
+
+# Deployment
+*.sock

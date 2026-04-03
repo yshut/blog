@@ -5,7 +5,9 @@ from django.contrib import messages
 from django.core.paginator import Paginator
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
-from django.db.models import Q
+from django.db.models import Q, F
+from django.views.decorators.cache import cache_page
+from django.core.cache import cache
 import json
 
 from .models import Article, Category, Tag, Comment
@@ -17,7 +19,8 @@ from .forms import (
 
 def index(request):
     """首页 - 文章列表"""
-    articles = Article.objects.filter(status='published')
+    # 使用 select_related 预加载外键关系，减少数据库查询
+    articles = Article.objects.filter(status='published').select_related('category', 'author')
 
     # 搜索功能
     search_query = request.GET.get('q', '')
@@ -42,8 +45,16 @@ def index(request):
     page = request.GET.get('page', 1)
     articles = paginator.get_page(page)
 
-    categories = Category.objects.all()
-    tags = Tag.objects.all()
+    # 使用缓存减少分类和标签查询
+    categories = cache.get('all_categories')
+    if categories is None:
+        categories = Category.objects.all()
+        cache.set('all_categories', categories, 300)  # 缓存5分钟
+
+    tags = cache.get('all_tags')
+    if tags is None:
+        tags = Tag.objects.all()
+        cache.set('all_tags', tags, 300)  # 缓存5分钟
 
     context = {
         'articles': articles,
@@ -58,11 +69,14 @@ def index(request):
 
 def article_detail(request, slug):
     """文章详情页"""
-    article = get_object_or_404(Article, slug=slug, status='published')
+    article = get_object_or_404(
+        Article.objects.select_related('category', 'author').prefetch_related('tags'),
+        slug=slug, status='published'
+    )
     article.increase_views()
 
-    # 获取评论
-    comments = article.comments.filter(is_approved=True, parent__isnull=True)
+    # 获取评论，预加载回复
+    comments = article.comments.filter(is_approved=True, parent__isnull=True).select_related('author')
 
     # 评论表单
     if request.user.is_authenticated:
